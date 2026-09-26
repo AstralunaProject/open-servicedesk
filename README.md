@@ -52,8 +52,8 @@ Escolha uma das opções. Em todas, ao abrir o sistema pela primeira vez você c
 Requer [Docker](https://docs.docker.com/get-docker/) com o plugin Compose.
 
 ```bash
-git clone https://github.com/AstralunaProject/T.I-Chamados.git
-cd T.I-Chamados
+git clone https://github.com/AstralunaProject/open-servicedesk.git
+cd open-servicedesk
 docker compose up -d
 ```
 
@@ -67,8 +67,8 @@ Requer Python 3.10+.
 
 ```bash
 sudo apt install -y python3 python3-venv git
-git clone https://github.com/AstralunaProject/T.I-Chamados.git
-cd T.I-Chamados
+git clone https://github.com/AstralunaProject/open-servicedesk.git
+cd open-servicedesk
 sudo ./scripts/instalar-linux.sh        # porta padrão 8080; ex.: sudo ./scripts/instalar-linux.sh 80
 ```
 

@@ -54,8 +54,8 @@ Pick one of the options below. In all of them, the first time you open the syste
 Requires [Docker](https://docs.docker.com/get-docker/) with the Compose plugin.
 
 ```bash
-git clone https://github.com/AstralunaProject/T.I-Chamados.git
-cd T.I-Chamados
+git clone https://github.com/AstralunaProject/open-servicedesk.git
+cd open-servicedesk
 docker compose up -d
 ```
 
@@ -69,8 +69,8 @@ Requires Python 3.10+.
 
 ```bash
 sudo apt install -y python3 python3-venv git
-git clone https://github.com/AstralunaProject/T.I-Chamados.git
-cd T.I-Chamados
+git clone https://github.com/AstralunaProject/open-servicedesk.git
+cd open-servicedesk
 sudo ./scripts/instalar-linux.sh        # default port 8080; e.g.: sudo ./scripts/instalar-linux.sh 80
 ```
 
