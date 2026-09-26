@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Configurações</h1><p>Personalização, e-mail de saída e abertura de chamados por e-mail</p></div></div>
+
+<form method="post" class="card" id="general">
+  <div class="card-head"><h3>Geral</h3></div>
+  <div class="card-body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="general">
+    <div class="grid grid-3">
+      <div class="field"><label>Nome da empresa</label><input name="company_name" value="{{ cfg.company_name }}"></div>
+      <div class="field"><label>Nome do sistema</label><input name="app_title" value="{{ cfg.app_title }}"></div>
+      <div class="field"><label>Prefixo dos chamados</label><input name="ticket_prefix" value="{{ cfg.ticket_prefix }}" maxlength="6"><div class="hint">Ex.: CH → CH000123</div></div>
+      <div class="field"><label>Fuso horário</label><input name="timezone" value="{{ cfg.timezone }}"><div class="hint">Ex.: America/Sao_Paulo, America/Manaus</div></div>
+      <div class="field"><label>Reabertura permitida por (dias)</label><input type="number" min="0" name="reopen_days" value="{{ cfg.reopen_days }}"></div>
+      <div class="field"><label>Fechar resolvidos após (dias)</label><input type="number" min="0" name="auto_close_days" value="{{ cfg.auto_close_days }}"><div class="hint">0 = nunca fechar automaticamente</div></div>
+    </div>
+    <label class="check"><input type="checkbox" name="requester_can_set_priority" value="1" {{ 'checked' if cfg.requester_can_set_priority == '1' }}> Solicitante informa impacto e urgência ao abrir chamado</label>
+    <label class="check"><input type="checkbox" name="allow_registration" value="1" {{ 'checked' if cfg.allow_registration == '1' }}> Permitir que usuários criem a própria conta</label>
+    <div class="field"><label>Domínios permitidos no autocadastro</label><input name="registration_domains" value="{{ cfg.registration_domains }}" placeholder="empresa.com.br, filial.com.br"><div class="hint">Vazio = qualquer e-mail</div></div>
+    <div class="form-actions"><button class="btn btn-primary">Salvar</button></div>
+  </div>
+</form>
+
+<form method="post" class="card" id="smtp">
+  <div class="card-head"><h3>E-mail de saída (notificações)</h3></div>
+  <div class="card-body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="smtp">
+    <p class="muted">Avisos de chamado aberto, respostas, atribuições e soluções. Funciona com Microsoft 365, Google Workspace, Zoho, provedores de hospedagem etc.</p>
+    <label class="check"><input type="checkbox" name="notify_enabled" value="1" {{ 'checked' if cfg.notify_enabled == '1' }}> Enviar notificações por e-mail</label>
+    <div class="grid grid-3">
+      <div class="field"><label>Servidor SMTP</label><input name="smtp_host" value="{{ cfg.smtp_host }}" placeholder="smtp.office365.com"></div>
+      <div class="field"><label>Porta</label><input type="number" name="smtp_port" value="{{ cfg.smtp_port }}"></div>
+      <div class="field"><label>Segurança</label><select name="smtp_security">{% for k, v in {"starttls": "STARTTLS (587)", "ssl": "SSL/TLS (465)", "none": "Nenhuma (25)"}.items() %}<option value="{{ k }}" {{ 'selected' if cfg.smtp_security == k }}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Usuário</label><input name="smtp_user" value="{{ cfg.smtp_user }}" autocomplete="off"></div>
+      <div class="field"><label>Senha</label><input type="password" name="smtp_password" placeholder="{{ '•••••••• (mantida)' if cfg.smtp_password else '' }}" autocomplete="new-password"></div>
+      <div class="field"><label>Remetente</label><input type="email" name="smtp_from" value="{{ cfg.smtp_from }}" placeholder="suporte@empresa.com.br"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" formaction="{{ url_for('admin.test_email') }}" formnovalidate>Enviar e-mail de teste</button>
+      <button class="btn btn-primary">Salvar</button>
+    </div>
+    <p class="hint">Salve antes de testar. O teste é enviado para {{ me.email }}.</p>
+  </div>
+</form>
+
+<form method="post" class="card" id="imap">
+  <div class="card-head"><h3>Abrir chamados por e-mail (IMAP)</h3></div>
+  <div class="card-body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="imap">
+    <p class="muted">Os e-mails não lidos da caixa (ex.: <code>suporte@empresa.com.br</code>) viram chamados. Respostas com <code>[{{ cfg.ticket_prefix }}000123]</code> no assunto são adicionadas ao chamado existente.</p>
+    <label class="check"><input type="checkbox" name="imap_enabled" value="1" {{ 'checked' if cfg.imap_enabled == '1' }}> Ler a caixa de entrada periodicamente</label>
+    <label class="check"><input type="checkbox" name="imap_create_users" value="1" {{ 'checked' if cfg.imap_create_users == '1' }}> Criar solicitante automaticamente para remetentes desconhecidos</label>
+    <div class="grid grid-3">
+      <div class="field"><label>Servidor IMAP</label><input name="imap_host" value="{{ cfg.imap_host }}" placeholder="outlook.office365.com"></div>
+      <div class="field"><label>Porta</label><input type="number" name="imap_port" value="{{ cfg.imap_port }}"><div class="hint">993 = SSL; outra porta usa STARTTLS</div></div>
+      <div class="field"><label>Pasta</label><input name="imap_folder" value="{{ cfg.imap_folder }}"></div>
+      <div class="field"><label>Usuário</label><input name="imap_user" value="{{ cfg.imap_user }}" autocomplete="off"></div>
+      <div class="field"><label>Senha</label><input type="password" name="imap_password" placeholder="{{ '•••••••• (mantida)' if cfg.imap_password else '' }}" autocomplete="new-password"></div>
+      <div class="field"><label>Intervalo (minutos)</label><input type="number" min="1" name="imap_interval" value="{{ cfg.imap_interval }}"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" formaction="{{ url_for('admin.test_imap') }}" formnovalidate>Testar conexão</button>
+      <button class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

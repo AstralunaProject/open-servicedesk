@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><a class="small" href="{{ url_for('kb.index') }}">← Base de conhecimento</a><h1 class="mt">{{ article.title }}</h1>
+    <p>{% if article.category %}{{ article.category.name }} · {% endif %}Atualizado em {{ article.updated_at|date }}{% if article.author %} por {{ article.author.name }}{% endif %}</p></div>
+  {% if me.is_agent %}
+  <div class="actions">
+    {% if not article.published %}<span class="tag">Rascunho</span>{% endif %}{% if article.internal %}<span class="tag violet">Somente T.I</span>{% endif %}
+    <a class="btn" href="{{ url_for('kb.edit', article_id=article.id) }}">Editar</a>
+    <form method="post" action="{{ url_for('kb.delete', article_id=article.id) }}" data-confirm="Excluir este artigo?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Excluir</button></form>
+  </div>
+  {% endif %}
+</div>
+<div class="card"><div class="card-body prose">{{ article.body|markdown }}</div></div>
+<div class="notice">Não resolveu? <a href="{{ url_for('tickets.new_ticket', category_id=article.category_id or '') }}">Abra um chamado</a> e a equipe de T.I vai ajudar.</div>
+{% endblock %}

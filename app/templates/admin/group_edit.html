@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name if group.id else "Novo grupo" }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><a class="small" href="{{ url_for('admin.groups') }}">← Grupos</a><h1 class="mt">{{ group.name if group.id else "Novo grupo" }}</h1></div>
+  {% if group.id %}<div class="actions"><form method="post" action="{{ url_for('admin.group_delete', group_id=group.id) }}" data-confirm="Excluir o grupo? Os chamados ficarão sem grupo."><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Excluir</button></form></div>{% endif %}
+</div>
+<form method="post" class="card"><div class="card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="grid grid-2">
+    <div class="field"><label>Nome</label><input name="name" value="{{ group.name or '' }}" required></div>
+    <div class="field"><label>E-mail do grupo <span class="hint">(opcional — recebe avisos de novos chamados)</span></label><input type="email" name="email" value="{{ group.email or '' }}"></div>
+  </div>
+  <div class="field"><label>Descrição</label><input name="description" value="{{ group.description or '' }}"></div>
+  <div class="field"><label>Membros</label>
+    {% if agents %}<div class="checks">{% for a in agents %}<label class="check"><input type="checkbox" name="members" value="{{ a.id }}" {{ 'checked' if a in group.members }}> {{ a.name }}</label>{% endfor %}</div>
+    {% else %}<p class="muted">Cadastre usuários com perfil Técnico para adicioná-los ao grupo.</p>{% endif %}</div>
+  <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if group.active or not group.id }}> Grupo ativo</label>
+  <div class="form-actions"><a class="btn" href="{{ url_for('admin.groups') }}">Cancelar</a><button class="btn btn-primary">Salvar</button></div>
+</div></form>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "auth_base.html" %}
+{% block title %}Configuração inicial{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block auth %}
+<h2>Bem-vindo! Vamos configurar sua central de chamados</h2>
+<p class="muted">Crie a conta do administrador. Grupos de atendimento e categorias padrão serão criados automaticamente — você pode alterá-los depois.</p>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="company_name">Nome da empresa</label><input id="company_name" name="company_name" value="{{ form.get('company_name', '') }}" placeholder="Ex.: Padaria Pão Quente Ltda"></div>
+  <div class="grid grid-2">
+    <div class="field"><label for="name">Seu nome</label><input id="name" name="name" value="{{ form.get('name', '') }}" required></div>
+    <div class="field"><label for="email">Seu e-mail</label><input type="email" id="email" name="email" value="{{ form.get('email', '') }}" required></div>
+    <div class="field"><label for="password">Senha</label><input type="password" id="password" name="password" minlength="8" required autocomplete="new-password"></div>
+    <div class="field"><label for="confirm">Confirmar senha</label><input type="password" id="confirm" name="confirm" minlength="8" required autocomplete="new-password"></div>
+  </div>
+  <button class="btn btn-primary btn-block" type="submit">Concluir configuração</button>
+</form>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon %}
+{% block title %}Abrir chamado{% endblock %}
+{% block content %}
+{% set sel_type = form.get('type') or request.args.get('type') or 'incident' %}
+<div class="page-head"><div><h1>Abrir chamado</h1><p>{{ "Registre um atendimento em nome de um usuário ou para você mesmo." if me.is_agent else "Descreva o que está acontecendo. Quanto mais detalhes, mais rápido conseguimos ajudar." }}</p></div></div>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="ticket-layout">
+    <div class="card">
+      <div class="card-body">
+        <div class="field">
+          <label>O que você precisa?</label>
+          <div class="choice-group" style="grid-template-columns: repeat(2, 1fr)">
+            <label><input type="radio" name="type" value="incident" {{ 'checked' if sel_type == 'incident' }}><span>Algo não está funcionando<br><small class="muted">Incidente</small></span></label>
+            <label><input type="radio" name="type" value="request" {{ 'checked' if sel_type == 'request' }}><span>Quero solicitar algo<br><small class="muted">Requisição</small></span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="category_id">Categoria</label>
+          <select id="category_id" name="category_id" required>
+            <option value="">Selecione…</option>
+            {% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if (form.get('category_id') or request.args.get('category_id')) == c.id|string }}>{{ c.name }}{% if c.description %} — {{ c.description }}{% endif %}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field"><label for="title">Resumo</label><input id="title" name="title" maxlength="200" value="{{ form.get('title', '') }}" placeholder="Ex.: Impressora do financeiro não imprime" required></div>
+        <div class="field"><label for="description">Descrição</label><textarea id="description" name="description" rows="8" placeholder="O que aconteceu? Desde quando? Aparece alguma mensagem de erro?" required>{{ form.get('description', '') }}</textarea></div>
+        <div class="field"><label for="files">Anexos <span class="hint">(prints, documentos — opcional)</span></label><input type="file" id="files" name="files" multiple data-file-list="file-names"><div id="file-names" class="hint"></div></div>
+      </div>
+    </div>
+    <div>
+      {% if me.is_agent %}
+      <div class="card">
+        <div class="card-head"><h3>Atendimento</h3></div>
+        <div class="card-body">
+          <div class="field"><label for="requester_email">Solicitante</label>
+            <input id="requester_email" name="requester_email" list="user-list" value="{{ form.get('requester_email', '') }}" placeholder="E-mail (vazio = você)">
+            <datalist id="user-list">{% for u in users %}<option value="{{ u.email }}">{{ u.name }}{% if u.department %} · {{ u.department }}{% endif %}</option>{% endfor %}</datalist></div>
+          <div class="field"><label for="channel">Canal</label><select id="channel" name="channel">{% for k, v in CHANNELS.items() if k != 'api' %}<option value="{{ k }}" {{ 'selected' if (form.get('channel') or 'phone') == k }}>{{ v }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="group_id">Grupo</label><select id="group_id" name="group_id" data-group-select><option value="">Automático (pela categoria)</option>{% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if form.get('group_id') == g.id|string }}>{{ g.name }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="assignee_id">Responsável</label><select id="assignee_id" name="assignee_id" data-assignee-select><option value="">— Ninguém —</option>{% for a in agents %}<option value="{{ a.id }}" data-name="{{ a.name }}" data-groups="{{ a.groups|map(attribute='id')|join(',') }}" {{ 'selected' if form.get('assignee_id') == a.id|string }}>{{ a.name }}</option>{% endfor %}</select></div>
+          <div class="grid grid-2">
+            <div class="field"><label for="impact">Impacto</label><select id="impact" name="impact">{% for k, v in IMPACTS.items() %}<option value="{{ k }}" {{ 'selected' if (form.get('impact') or '3') == k|string }}>{{ v }}</option>{% endfor %}</select></div>
+            <div class="field"><label for="urgency">Urgência</label><select id="urgency" name="urgency">{% for k, v in URGENCIES.items() %}<option value="{{ k }}" {{ 'selected' if (form.get('urgency') or '3') == k|string }}>{{ v }}</option>{% endfor %}</select></div>
+          </div>
+          {% if assets %}<div class="field"><label for="asset_id">Ativo relacionado</label><select id="asset_id" name="asset_id"><option value="">—</option>{% for a in assets %}<option value="{{ a.id }}">{{ a.display }}</option>{% endfor %}</select></div>{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="card">
+        <div class="card-body">
+          {% if cfg.requester_can_set_priority == "1" %}
+          <div class="field"><label>Quem é afetado?</label>
+            <div class="choice-group">{% for k, v in IMPACTS_FRIENDLY.items() %}<label><input type="radio" name="impact" value="{{ k }}" {{ 'checked' if (form.get('impact') or '3') == k|string }}><span>{{ v }}</span></label>{% endfor %}</div></div>
+          <div class="field"><label>Qual a urgência?</label>
+            <div class="choice-group">{% for k, v in URGENCIES_FRIENDLY.items() %}<label><input type="radio" name="urgency" value="{{ k }}" {{ 'checked' if (form.get('urgency') or '3') == k|string }}><span>{{ v }}</span></label>{% endfor %}</div></div>
+          {% endif %}
+          {% if assets %}<div class="field"><label for="asset_id">Equipamento</label><select id="asset_id" name="asset_id"><option value="">Não sei / não se aplica</option>{% for a in assets %}<option value="{{ a.id }}">{{ a.display }}</option>{% endfor %}</select></div>{% endif %}
+          <p class="small muted">Você receberá atualizações por e-mail e pode acompanhar tudo em "Meus chamados".</p>
+        </div>
+      </div>
+      {% endif %}
+      <button class="btn btn-primary btn-block" type="submit">Abrir chamado</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

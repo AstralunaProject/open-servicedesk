@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, status_badge, priority_badge, sla_text, avatar %}
+{% block title %}Painel{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Olá, {{ me.name.split()[0] }}</h1><p>Visão geral do atendimento</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('tickets.export_csv', view='todos') }}">{{ icon('download') }} Exportar CSV</a>
+    <a class="btn btn-primary" href="{{ url_for('tickets.new_ticket') }}">{{ icon('plus') }} Novo chamado</a>
+  </div>
+</div>
+
+<div class="kpis">
+  <a class="kpi" href="{{ url_for('tickets.list_tickets', view='abertos') }}"><div class="label">Em aberto</div><div class="value">{{ kpis.open }}</div></a>
+  <a class="kpi {{ 'warn' if kpis.unassigned }}" href="{{ url_for('tickets.list_tickets', view='sem_responsavel') }}"><div class="label">Sem responsável</div><div class="value">{{ kpis.unassigned }}</div></a>
+  <a class="kpi" href="{{ url_for('tickets.list_tickets', view='meus') }}"><div class="label">Atribuídos a mim</div><div class="value">{{ kpis.mine }}</div></a>
+  <a class="kpi" href="{{ url_for('tickets.list_tickets', view='grupos') }}"><div class="label">Fila dos meus grupos</div><div class="value">{{ kpis.my_groups }}</div></a>
+  <a class="kpi {{ 'danger' if kpis.overdue }}" href="{{ url_for('tickets.list_tickets', view='atrasados') }}"><div class="label">SLA vencido</div><div class="value">{{ kpis.overdue }}</div></a>
+  <a class="kpi" href="{{ url_for('tickets.list_tickets', view='aguardando') }}"><div class="label">Em espera</div><div class="value">{{ kpis.waiting }}</div></a>
+</div>
+
+<div class="kpis">
+  <div class="kpi good"><div class="label">Resolvidos (30 dias)</div><div class="value">{{ stats.resolved_30 }}</div></div>
+  <div class="kpi"><div class="label">Tempo médio de solução</div><div class="value">{{ stats.avg_resolution|duration if stats.avg_resolution is not none else "—" }}</div></div>
+  <div class="kpi {{ 'good' if stats.sla_rate is not none and stats.sla_rate >= 90 else ('warn' if stats.sla_rate is not none else '') }}"><div class="label">Cumprimento de SLA</div><div class="value">{{ stats.sla_rate ~ "%" if stats.sla_rate is not none else "—" }}</div></div>
+  <div class="kpi"><div class="label">Satisfação ({{ stats.csat_count }} avaliações)</div><div class="value">{{ stats.csat ~ " ★" if stats.csat else "—" }}</div></div>
+</div>
+
+<div class="dash-grid">
+  <div class="card span-8">
+    <div class="card-head"><h3>Volume diário — últimos 14 dias</h3>
+      <div class="legend"><span><i style="background:var(--primary)"></i>Abertos</span><span><i style="background:var(--success)"></i>Resolvidos</span></div></div>
+    <div class="card-body">
+      <div class="columns-chart">
+        {% for d in daily %}
+        <div class="day" title="{{ d.day.strftime('%d/%m') }}: {{ d.created }} aberto(s), {{ d.resolved }} resolvido(s)">
+          <div class="pair">
+            <div class="col created" style="height: {{ (d.created / daily_max * 100)|round(1) }}%"></div>
+            <div class="col resolved" style="height: {{ (d.resolved / daily_max * 100)|round(1) }}%"></div>
+          </div>
+          <div class="lbl">{{ d.day.strftime('%d/%m') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="card span-4">
+    <div class="card-head"><h3>Abertos por prioridade</h3></div>
+    <div class="card-body hbars">
+      {% set pmax = [1] + by_priority.values()|list %}
+      {% for p, label in PRIORITIES.items() %}
+        {% set n = by_priority.get(p, 0) %}
+        <div class="hbar"><a class="name" href="{{ url_for('tickets.list_tickets', view='abertos', priority=p) }}">P{{ p }} · {{ label }}</a><div class="track"><div class="fill p{{ p }}" style="width: {{ (n / (pmax|max) * 100)|round(1) }}%"></div></div><div class="num">{{ n }}</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card span-4">
+    <div class="card-head"><h3>Abertos por status</h3></div>
+    <div class="card-body hbars">
+      {% set smax = [1] + by_status.values()|list %}
+      {% for s in ["new", "in_progress", "waiting_user", "waiting_vendor"] %}
+        {% set n = by_status.get(s, 0) %}
+        <div class="hbar"><a class="name" href="{{ url_for('tickets.list_tickets', view='abertos', status=s) }}">{{ STATUSES[s] }}</a><div class="track"><div class="fill" style="width: {{ (n / (smax|max) * 100)|round(1) }}%"></div></div><div class="num">{{ n }}</div></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card span-4">
+    <div class="card-head"><h3>Abertos por grupo</h3></div>
+    <div class="card-body hbars">
+      {% set gmax = [1] + by_group|map(attribute=1)|list %}
+      {% for name, n in by_group %}
+        <div class="hbar"><span class="name" title="{{ name }}">{{ name }}</span><div class="track"><div class="fill" style="width: {{ (n / (gmax|max) * 100)|round(1) }}%"></div></div><div class="num">{{ n }}</div></div>
+      {% else %}<p class="muted">Nenhum chamado em aberto.</p>{% endfor %}
+    </div>
+  </div>
+  <div class="card span-4">
+    <div class="card-head"><h3>Top categorias (30 dias)</h3></div>
+    <div class="card-body hbars">
+      {% set cmax = [1] + top_categories|map(attribute=1)|list %}
+      {% for name, n in top_categories %}
+        <div class="hbar"><span class="name" title="{{ name }}">{{ name }}</span><div class="track"><div class="fill" style="width: {{ (n / (cmax|max) * 100)|round(1) }}%; background: var(--violet)"></div></div><div class="num">{{ n }}</div></div>
+      {% else %}<p class="muted">Sem dados ainda.</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card span-6">
+    <div class="card-head"><h3>Minha fila</h3><a class="small" href="{{ url_for('tickets.list_tickets', view='meus') }}">Ver todos</a></div>
+    <ul class="list">
+      {% for t in my_queue %}
+      <li>{{ priority_badge(t) }}<div class="grow ellipsis"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a><div class="small muted">{{ t.number }} · {{ t.requester.name }}</div></div><div class="small nowrap">{{ sla_text(t, now) }}</div></li>
+      {% else %}<li class="muted">Nenhum chamado atribuído a você.</li>{% endfor %}
+    </ul>
+  </div>
+  <div class="card span-6">
+    <div class="card-head"><h3>Aguardando responsável</h3><a class="small" href="{{ url_for('tickets.list_tickets', view='sem_responsavel') }}">Ver todos</a></div>
+    <ul class="list">
+      {% for t in unassigned %}
+      <li>{{ priority_badge(t) }}<div class="grow ellipsis"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a><div class="small muted">{{ t.number }} · {{ t.group.name if t.group else "Sem grupo" }} · {{ t.created_at|ago }}</div></div>
+        <form method="post" action="{{ url_for('tickets.take', ticket_id=t.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Assumir</button></form></li>
+      {% else %}<li class="muted">Tudo distribuído!</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

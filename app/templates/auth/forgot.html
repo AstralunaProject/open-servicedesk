@@ -1,0 +1,16 @@
+{% extends "auth_base.html" %}
+{% block title %}Esqueci minha senha{% endblock %}
+{% block auth %}
+<h2>Esqueci minha senha</h2>
+{% if email_enabled %}
+<p class="muted">Informe seu e-mail e enviaremos um link para criar uma nova senha.</p>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="email">E-mail</label><input type="email" id="email" name="email" required autofocus></div>
+  <button class="btn btn-primary btn-block" type="submit">Enviar link</button>
+</form>
+{% else %}
+<div class="notice">O envio de e-mails não está configurado. Peça para a equipe de T.I redefinir sua senha.</div>
+{% endif %}
+<div class="auth-links"><a href="{{ url_for('auth.login') }}">Voltar ao login</a></div>
+{% endblock %}

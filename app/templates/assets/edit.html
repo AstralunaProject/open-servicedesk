@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar ativo" if asset.id else "Novo ativo" }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ "Editar ativo" if asset.id else "Novo ativo" }}</h1></div></div>
+<form method="post" class="card"><div class="card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="grid grid-3">
+    <div class="field"><label>Patrimônio / etiqueta</label><input name="tag" value="{{ request.form.get('tag', asset.tag or '') }}" required maxlength="60"></div>
+    <div class="field"><label>Nome</label><input name="name" value="{{ request.form.get('name', asset.name or '') }}" required maxlength="160" placeholder="Ex.: Notebook da Ana"></div>
+    <div class="field"><label>Tipo</label><select name="type">{% for t in types %}<option {{ 'selected' if (request.form.get('type') or asset.type) == t }}>{{ t }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Situação</label><select name="status">{% for k, v in statuses.items() %}<option value="{{ k }}" {{ 'selected' if (request.form.get('status') or asset.status or 'in_use') == k }}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Usuário responsável</label><select name="assigned_to_id"><option value="">—</option>{% for u in users %}<option value="{{ u.id }}" {{ 'selected' if asset.assigned_to_id == u.id }}>{{ u.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Local</label><input name="location" value="{{ asset.location or '' }}" placeholder="Ex.: Matriz — 2º andar"></div>
+    <div class="field"><label>Fabricante</label><input name="manufacturer" value="{{ asset.manufacturer or '' }}"></div>
+    <div class="field"><label>Modelo</label><input name="model" value="{{ asset.model or '' }}"></div>
+    <div class="field"><label>Nº de série</label><input name="serial" value="{{ asset.serial or '' }}"></div>
+    <div class="field"><label>Data de compra</label><input type="date" name="purchase_date" value="{{ asset.purchase_date.isoformat() if asset.purchase_date else '' }}"></div>
+    <div class="field"><label>Garantia até</label><input type="date" name="warranty_until" value="{{ asset.warranty_until.isoformat() if asset.warranty_until else '' }}"></div>
+  </div>
+  <div class="field"><label>Observações</label><textarea name="notes" rows="4" placeholder="Configuração, licenças, IP, acessórios…">{{ asset.notes or '' }}</textarea></div>
+  <div class="form-actions"><a class="btn" href="{{ url_for('assets.view', asset_id=asset.id) if asset.id else url_for('assets.index') }}">Cancelar</a><button class="btn btn-primary">Salvar</button></div>
+</div></form>
+{% endblock %}

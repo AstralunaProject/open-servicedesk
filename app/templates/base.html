@@ -1,0 +1,69 @@
+{% from "macros.html" import icon, avatar %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{% if self.title() %} · {% endif %}{{ app_title }}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232563eb'/><text x='16' y='21' font-size='13' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'>TI</text></svg>">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ version }}">
+</head>
+<body>
+{% block body %}
+{% set ep = request.endpoint or "" %}
+{% set view = request.args.get("view") %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">TI</div>
+      <div><div class="brand-name">{{ app_title }}</div><div class="brand-sub">{{ company_name }}</div></div>
+    </div>
+    <nav class="nav">
+      <a href="{{ url_for('main.index') }}" class="{{ 'active' if ep == 'main.index' }}">{{ icon('home') }} {{ 'Painel' if me.is_agent else 'Início' }}</a>
+      <a href="{{ url_for('tickets.new_ticket') }}" class="{{ 'active' if ep == 'tickets.new_ticket' }}">{{ icon('plus') }} Abrir chamado</a>
+      {% if me.is_agent %}
+        <div class="nav-section">Atendimento</div>
+        <a href="{{ url_for('tickets.list_tickets', view='meus') }}" class="{{ 'active' if ep == 'tickets.list_tickets' and view == 'meus' }}">{{ icon('user') }} Meus chamados</a>
+        <a href="{{ url_for('tickets.list_tickets', view='grupos') }}" class="{{ 'active' if ep == 'tickets.list_tickets' and view == 'grupos' }}">{{ icon('users') }} Fila dos meus grupos</a>
+        <a href="{{ url_for('tickets.list_tickets', view='sem_responsavel') }}" class="{{ 'active' if ep == 'tickets.list_tickets' and view == 'sem_responsavel' }}">{{ icon('inbox') }} Sem responsável</a>
+        <a href="{{ url_for('tickets.list_tickets', view='abertos') }}" class="{{ 'active' if ep == 'tickets.list_tickets' and view not in ('meus','grupos','sem_responsavel') }}">{{ icon('ticket') }} Todos os chamados</a>
+        <div class="nav-section">Gestão</div>
+        <a href="{{ url_for('assets.index') }}" class="{{ 'active' if ep.startswith('assets.') }}">{{ icon('box') }} Ativos</a>
+        <a href="{{ url_for('kb.index') }}" class="{{ 'active' if ep.startswith('kb.') }}">{{ icon('book') }} Base de conhecimento</a>
+      {% else %}
+        <a href="{{ url_for('tickets.list_tickets') }}" class="{{ 'active' if ep.startswith('tickets.') and ep != 'tickets.new_ticket' }}">{{ icon('ticket') }} Meus chamados</a>
+        <a href="{{ url_for('kb.index') }}" class="{{ 'active' if ep.startswith('kb.') }}">{{ icon('book') }} Ajuda / Tutoriais</a>
+      {% endif %}
+      {% if me.is_admin %}
+        <div class="nav-section">Administração</div>
+        <a href="{{ url_for('admin.users') }}" class="{{ 'active' if ep.startswith('admin.user') }}">{{ icon('users') }} Usuários</a>
+        <a href="{{ url_for('admin.groups') }}" class="{{ 'active' if ep.startswith('admin.group') }}">{{ icon('layers') }} Grupos</a>
+        <a href="{{ url_for('admin.categories') }}" class="{{ 'active' if ep.startswith('admin.categor') }}">{{ icon('tag') }} Categorias</a>
+        <a href="{{ url_for('admin.sla') }}" class="{{ 'active' if ep == 'admin.sla' }}">{{ icon('clock') }} SLA e horários</a>
+        <a href="{{ url_for('admin.settings') }}" class="{{ 'active' if ep == 'admin.settings' }}">{{ icon('settings') }} Configurações</a>
+        <a href="{{ url_for('admin.system') }}" class="{{ 'active' if ep == 'admin.system' }}">{{ icon('database') }} Sistema e backup</a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      {{ avatar(me) }}
+      <div class="who"><a href="{{ url_for('auth.profile') }}">{{ me.name }}</a><span>{{ me.role_label }}</span></div>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" title="Sair">{{ icon('logout') }}</button>
+      </form>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar"><button type="button" data-toggle-sidebar aria-label="Menu">☰</button><strong>{{ app_title }}</strong></div>
+    <main class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}<div class="flashes">{% for cat, msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+<script src="{{ url_for('static', filename='js/app.js') }}?v={{ version }}"></script>
+</body>
+</html>

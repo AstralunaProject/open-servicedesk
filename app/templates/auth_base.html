@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card {% block card_class %}{% endblock %}">
+    <div class="brand">
+      <div class="brand-logo">TI</div>
+      <div><div class="brand-name">{{ app_title }}</div><div class="brand-sub">{{ company_name }}</div></div>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat, msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% block auth %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

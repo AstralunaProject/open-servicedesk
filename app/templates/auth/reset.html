@@ -1,0 +1,11 @@
+{% extends "auth_base.html" %}
+{% block title %}Nova senha{% endblock %}
+{% block auth %}
+<h2>Definir nova senha</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="password">Nova senha</label><input type="password" id="password" name="password" minlength="8" required autocomplete="new-password"></div>
+  <div class="field"><label for="confirm">Confirmar senha</label><input type="password" id="confirm" name="confirm" minlength="8" required autocomplete="new-password"></div>
+  <button class="btn btn-primary btn-block" type="submit">Salvar senha</button>
+</form>
+{% endblock %}

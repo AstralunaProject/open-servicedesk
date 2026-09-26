@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar artigo" if article.id else "Novo artigo" }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ "Editar artigo" if article.id else "Novo artigo" }}</h1></div></div>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="ticket-layout">
+    <div class="card"><div class="card-body">
+      <div class="field"><label>Título</label><input name="title" value="{{ article.title or '' }}" required maxlength="200"></div>
+      <div class="field"><label>Resumo</label><input name="summary" value="{{ article.summary or '' }}" maxlength="300" placeholder="Uma frase que aparece na listagem"></div>
+      <div class="field"><label>Conteúdo</label><textarea name="body" rows="20" style="font-family: ui-monospace, Menlo, Consolas, monospace">{{ article.body or '' }}</textarea>
+        <div class="hint">Formatação: <code>## Título</code>, <code>**negrito**</code>, <code>*itálico*</code>, <code>- lista</code>, <code>1. lista numerada</code>, <code>`código`</code>, <code>```bloco```</code>, <code>&gt; destaque</code>, <code>[texto](https://link)</code></div></div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <div class="field"><label>Categoria</label><select name="category_id"><option value="">—</option>{% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if article.category_id == c.id }}>{{ c.name }}</option>{% endfor %}</select></div>
+      <label class="check"><input type="checkbox" name="published" value="1" {{ 'checked' if article.published }}> Publicado</label>
+      <label class="check"><input type="checkbox" name="internal" value="1" {{ 'checked' if article.internal }}> Somente equipe de T.I (interno)</label>
+      <p class="hint">Artigos publicados e não internos aparecem para todos os usuários.</p>
+      <button class="btn btn-primary btn-block">Salvar</button>
+    </div></div>
+  </div>
+</form>
+{% endblock %}
