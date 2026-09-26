@@ -22,11 +22,11 @@ def main() -> None:
     port = int(os.environ.get("PORT", "8080"))
     threads = int(os.environ.get("THREADS", "8"))
     start_background_worker(app)
-    print(f"\n  T.I Chamados {__version__}")
+    print(f"\n  Open Servicedesk {__version__}")
     print(f"  Dados em:   {app.config['DATA_DIR']}")
     print(f"  Acesse:     http://localhost:{port}   ou   http://{_local_ip()}:{port}")
     print("  Para parar: Ctrl+C\n")
-    serve(app, host=host, port=port, threads=threads, ident="TI-Chamados")
+    serve(app, host=host, port=port, threads=threads, ident="Open-Servicedesk")
 
 
 if __name__ == "__main__":

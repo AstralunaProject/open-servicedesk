@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Instala o T.I Chamados em /opt/ti-chamados e registra um serviço systemd.
+# Instala o Open Servicedesk em /opt/open-servicedesk e registra um serviço systemd.
 # Uso: sudo ./scripts/instalar-linux.sh [porta]
 set -euo pipefail
 
 PORT="${1:-8080}"
-DEST=/opt/ti-chamados
+DEST=/opt/open-servicedesk
 SERVICE_USER=chamados
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -39,9 +39,9 @@ chown -R "$SERVICE_USER": "$DEST"
 chmod 600 "$DEST/.env"
 
 echo "==> Criando serviço systemd"
-cat > /etc/systemd/system/ti-chamados.service <<UNIT
+cat > /etc/systemd/system/open-servicedesk.service <<UNIT
 [Unit]
-Description=T.I Chamados - central de serviços de T.I
+Description=Open Servicedesk - central de serviços de T.I
 After=network.target
 
 [Service]
@@ -56,13 +56,13 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now ti-chamados
+systemctl enable --now open-servicedesk
 
-cat > /etc/cron.d/ti-chamados-backup <<CRON
+cat > /etc/cron.d/open-servicedesk-backup <<CRON
 # Backup diário às 02h, mantendo os últimos 14 arquivos.
 0 2 * * * $SERVICE_USER cd $DEST && .venv/bin/flask --app wsgi backup >/dev/null && ls -1t data/backups/*.zip | tail -n +15 | xargs -r rm --
 CRON
 
 echo
 echo "Pronto! Acesse $(grep BASE_URL "$DEST/.env" | cut -d= -f2) para concluir a configuração."
-echo "Logs: journalctl -u ti-chamados -f"
+echo "Logs: journalctl -u open-servicedesk -f"

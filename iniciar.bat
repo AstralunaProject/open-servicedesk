@@ -1,5 +1,5 @@
 @echo off
-rem Inicia o T.I Chamados manualmente (Windows). Na primeira execução instala as dependências.
+rem Inicia o Open Servicedesk manualmente (Windows). Na primeira execução instala as dependências.
 cd /d "%~dp0"
 if not exist .venv (
     echo Instalando dependencias...

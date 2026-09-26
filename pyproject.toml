@@ -1,5 +1,5 @@
 [project]
-name = "ti-chamados"
+name = "open-servicedesk"
 version = "1.0.0"
 description = "Central de serviços de T.I auto-hospedada para pequenas empresas"
 readme = "README.md"

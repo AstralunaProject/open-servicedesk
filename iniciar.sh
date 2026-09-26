@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Inicia o T.I Chamados manualmente (Linux/macOS). Na primeira execução instala as dependências.
+# Inicia o Open Servicedesk manualmente (Linux/macOS). Na primeira execução instala as dependências.
 set -euo pipefail
 cd "$(dirname "$0")"
 if [[ ! -d .venv ]]; then

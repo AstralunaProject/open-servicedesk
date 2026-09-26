@@ -1,4 +1,4 @@
-# T.I Chamados
+# Open Servicedesk
 
 **English** · [Português](README.md)
 
@@ -74,17 +74,17 @@ cd open-servicedesk
 sudo ./scripts/instalar-linux.sh        # default port 8080; e.g.: sudo ./scripts/instalar-linux.sh 80
 ```
 
-The script installs to `/opt/ti-chamados`, creates the `ti-chamados` service (starts on boot) and schedules a daily backup at 2 AM.
+The script installs to `/opt/open-servicedesk`, creates the `open-servicedesk` service (starts on boot) and schedules a daily backup at 2 AM.
 
 ```bash
-sudo systemctl status ti-chamados     # status
-sudo journalctl -u ti-chamados -f     # logs
+sudo systemctl status open-servicedesk     # status
+sudo journalctl -u open-servicedesk -f     # logs
 ```
 
 ### Option 3 — Windows
 
 1. Install [Python 3.10+](https://www.python.org/downloads/), checking **"Add python.exe to PATH"**.
-2. Download the project (*Code → Download ZIP*) and extract it to a folder, e.g. `C:\TI-Chamados`.
+2. Download the project (*Code → Download ZIP*) and extract it to a folder, e.g. `C:\open-servicedesk`.
 3. To try it out, double-click `iniciar.bat`.
 4. To keep it running as a service (starts with Windows), open PowerShell **as administrator** in the folder and run:
 

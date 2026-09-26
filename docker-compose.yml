@@ -1,8 +1,8 @@
 services:
   chamados:
     build: .
-    image: ti-chamados:latest
-    container_name: ti-chamados
+    image: open-servicedesk:latest
+    container_name: open-servicedesk
     restart: unless-stopped
     ports:
       - "8080:8080"

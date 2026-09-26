@@ -315,7 +315,7 @@ def test_email():
     msg = notifications.build_message(
         cfg,
         [current_user.email],
-        "Teste de e-mail — T.I Chamados",
+        "Teste de e-mail — Open Servicedesk",
         "Se você recebeu esta mensagem, o envio de e-mails está funcionando.",
     )
     try:
