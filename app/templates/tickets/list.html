@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, status_badge, priority_badge, sla_text, avatar, pagination %}
+{% block title %}Chamados{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ "Chamados" if me.is_agent else "Meus chamados" }}</h1><p>{{ views[view] }}</p></div>
+  <div class="actions">
+    {% if me.is_agent %}<a class="btn" href="{{ url_for('tickets.export_csv', **args) }}">{{ icon('download') }} Exportar CSV</a>{% endif %}
+    <a class="btn btn-primary" href="{{ url_for('tickets.new_ticket') }}">{{ icon('plus') }} Novo chamado</a>
+  </div>
+</div>
+
+<div class="tabs">
+  {% for key, label in views.items() %}
+    <a href="{{ url_for('tickets.list_tickets', view=key) }}" class="{{ 'active' if key == view }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <form class="filters" method="get" data-autosubmit>
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="search" name="q" value="{{ args.get('q', '') }}" placeholder="Buscar por número, título{{ ', solicitante' if me.is_agent }}…">
+    <select name="status"><option value="">Status</option>{% for k, v in STATUSES.items() %}<option value="{{ k }}" {{ 'selected' if args.get('status') == k }}>{{ v }}</option>{% endfor %}</select>
+    <select name="priority"><option value="">Prioridade</option>{% for k, v in PRIORITIES.items() %}<option value="{{ k }}" {{ 'selected' if args.get('priority') == k|string }}>P{{ k }} · {{ v }}</option>{% endfor %}</select>
+    {% if me.is_agent %}
+    <select name="group"><option value="">Grupo</option>{% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if args.get('group') == g.id|string }}>{{ g.name }}</option>{% endfor %}</select>
+    <select name="assignee"><option value="">Responsável</option>{% for a in agents %}<option value="{{ a.id }}" {{ 'selected' if args.get('assignee') == a.id|string }}>{{ a.name }}</option>{% endfor %}</select>
+    {% endif %}
+    <select name="category"><option value="">Categoria</option>{% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if args.get('category') == c.id|string }}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="sort">
+      {% for k, v in {"prioridade": "Ordenar: prioridade", "prazo": "Ordenar: prazo SLA", "recentes": "Ordenar: mais recentes", "atualizados": "Ordenar: atualização"}.items() %}
+      <option value="{{ k }}" {{ 'selected' if sort == k }}>{{ v }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-sm">{{ icon('search') }} Filtrar</button>
+    {% if args|length > 1 %}<a class="small" href="{{ url_for('tickets.list_tickets', view=view) }}">Limpar</a>{% endif %}
+  </form>
+  {% if page.items %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr>
+        <th>Número</th><th>Chamado</th><th>Status</th><th>Prioridade</th>
+        {% if me.is_agent %}<th>Responsável</th>{% endif %}
+        <th>SLA</th><th>Atualizado</th>
+      </tr></thead>
+      <tbody>
+      {% for t in page.items %}
+        <tr class="row-link" data-href="{{ url_for('tickets.detail', ticket_id=t.id) }}">
+          <td class="nowrap"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.number }}</a></td>
+          <td class="title-cell"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a>
+            <div class="sub">{% if me.is_agent %}{{ t.requester.name }} · {% endif %}{{ t.category.name if t.category else "Sem categoria" }}{% if me.is_agent and t.group %} · {{ t.group.name }}{% endif %}</div></td>
+          <td>{{ status_badge(t) }}</td>
+          <td>{{ priority_badge(t) }}</td>
+          {% if me.is_agent %}<td class="nowrap">{% if t.assignee %}{{ t.assignee.name }}{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
+          <td class="nowrap small">{{ sla_text(t, now) }}</td>
+          <td class="nowrap small muted" title="{{ t.updated_at|dt }}">{{ t.updated_at|ago }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(page, 'tickets.list_tickets', args) }}
+  {% else %}
+  <div class="empty">{{ icon('inbox') }}<p>Nenhum chamado encontrado.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

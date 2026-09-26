@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, status_badge, priority_badge, avatar, attachment_link %}
+{% block title %}{{ ticket.number }} · {{ ticket.title }}{% endblock %}
+
+{% macro sla_line(label, due, state, done_at) %}
+<dt>{{ label }}</dt>
+<dd>
+  {% if not due %}<span class="muted">—</span>
+  {% else %}
+    <span title="Prazo: {{ due|dt }}">{{ due|dt }}</span><br>
+    {% if state == "met" %}<span class="small sla-met">✓ Cumprido ({{ done_at|dt }})</span>
+    {% elif state == "breached" and done_at %}<span class="small sla-breached">✗ Violado ({{ done_at|dt }})</span>
+    {% elif state == "breached" %}<span class="small sla-breached">⚠ {{ due|left }}</span>
+    {% elif state == "paused" %}<span class="small sla-paused">⏸ Pausado enquanto aguarda</span>
+    {% elif state %}<span class="small sla-{{ state }}">{{ due|left }}</span>{% endif %}
+  {% endif %}
+</dd>
+{% endmacro %}
+
+{% macro event_text(e) -%}
+{%- set labels = {"status": "status", "assignee": "responsável", "group": "grupo", "category": "categoria", "priority": "prioridade", "impact": "impacto", "urgency": "urgência", "type": "tipo", "title": "título", "asset": "ativo", "satisfaction": "avaliação"} -%}
+{%- if e.action == "reopened" -%}reabriu o chamado
+{%- elif e.action == "rated" -%}avaliou o atendimento com {{ e.new_value }} ★
+{%- elif e.field == "status" -%}alterou o status de <strong>{{ STATUSES.get(e.old_value, e.old_value) }}</strong> para <strong>{{ STATUSES.get(e.new_value, e.new_value) }}</strong>
+{%- elif e.field == "assignee" and e.new_value and not e.old_value -%}atribuiu a <strong>{{ e.new_value }}</strong>
+{%- else -%}alterou {{ labels.get(e.field, e.field) }}{% if e.old_value %} de <strong>{{ e.old_value }}</strong>{% endif %} para <strong>{{ e.new_value or "(vazio)" }}</strong>
+{%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="ticket-number">{{ ticket.number }} · {{ ticket.type_label }} · aberto {{ ticket.created_at|ago }} via {{ ticket.channel_label }}</div>
+    <div class="ticket-title"><h1 style="margin:0">{{ ticket.title }}</h1></div>
+    <div class="actions mt">{{ status_badge(ticket) }} {{ priority_badge(ticket) }}
+      {% if ticket.category %}<span class="tag">{{ ticket.category.name }}</span>{% endif %}</div>
+  </div>
+  <div class="actions no-print">
+    {% if me.is_agent and ticket.is_open and ticket.assignee_id != me.id %}
+      <form method="post" action="{{ url_for('tickets.take', ticket_id=ticket.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary">{{ icon('user') }} Assumir</button></form>
+    {% endif %}
+    {% if can_reopen %}
+      <form method="post" action="{{ url_for('tickets.reopen', ticket_id=ticket.id) }}" data-confirm="Reabrir este chamado?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn">Reabrir</button></form>
+    {% endif %}
+    {% if ticket.is_open and (me.is_agent or ticket.requester_id == me.id) %}
+      <form method="post" action="{{ url_for('tickets.cancel', ticket_id=ticket.id) }}" data-confirm="Cancelar este chamado?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Cancelar</button></form>
+    {% endif %}
+    <a class="btn btn-ghost" href="javascript:window.print()">Imprimir</a>
+  </div>
+</div>
+
+<div class="ticket-layout">
+  <div>
+    <div class="card">
+      <div class="card-head">
+        <div style="display:flex;gap:10px;align-items:center">{{ avatar(ticket.requester) }}<div><strong>{{ ticket.requester.name }}</strong><div class="small muted">{{ ticket.created_at|dt }}{% if ticket.created_by and ticket.created_by_id != ticket.requester_id %} · registrado por {{ ticket.created_by.name }}{% endif %}</div></div></div>
+      </div>
+      <div class="card-body description">
+        {{ ticket.description|nl2br if ticket.description else '<span class="muted">Sem descrição.</span>'|safe }}
+        {% if ticket_files %}<div class="files">{% for a in ticket_files %}{{ attachment_link(a) }}{% endfor %}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if ticket.status in ("resolved", "closed") and ticket.resolution_notes %}
+    <div class="card" style="border-color: var(--success)">
+      <div class="card-head"><h3>✓ Solução</h3><span class="tag">{{ RESOLUTION_CODES.get(ticket.resolution_code, "Solucionado") }}</span></div>
+      <div class="card-body">{{ ticket.resolution_notes|nl2br }}<div class="small muted mt">Resolvido em {{ ticket.resolved_at|dt }}</div></div>
+    </div>
+    {% endif %}
+
+    {% if ticket.requester_id == me.id and ticket.status in ("resolved", "closed") %}
+    <div class="card" id="avaliar">
+      <div class="card-head"><h3>Avaliação do atendimento</h3></div>
+      <div class="card-body">
+        {% if ticket.satisfaction %}
+          <div class="stars-view" style="font-size:22px">{{ "★" * ticket.satisfaction }}{{ "☆" * (5 - ticket.satisfaction) }}</div>
+          {% if ticket.satisfaction_comment %}<p class="mt">{{ ticket.satisfaction_comment }}</p>{% endif %}
+          <p class="small muted">Obrigado pelo retorno!</p>
+        {% else %}
+          <form method="post" action="{{ url_for('tickets.rate', ticket_id=ticket.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <p>Como foi o atendimento?</p>
+            <div class="stars mb">{% for i in range(5, 0, -1) %}<input type="radio" id="star{{ i }}" name="score" value="{{ i }}" required><label for="star{{ i }}" title="{{ i }}">★</label>{% endfor %}</div>
+            <div class="field"><textarea name="comment" rows="2" style="min-height:60px" placeholder="Comentário (opcional)"></textarea></div>
+            <button class="btn btn-primary">Enviar avaliação</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <h2 id="atividade" class="mt">Atividade</h2>
+    <div class="timeline mb">
+      {% for entry in timeline %}
+        {% if entry.kind == "comment" %}
+          {% set c = entry.item %}
+          <div class="tl-comment {{ 'internal' if c.internal }} {{ 'mine' if c.author_id == me.id }}">
+            {{ avatar(c.author) }}
+            <div class="tl-bubble">
+              <div class="head"><strong>{{ c.author.name if c.author else "Sistema" }}</strong>
+                {% if c.author and c.author.is_agent %}<span class="tag violet">T.I</span>{% endif %}
+                {% if c.internal %}<span class="tag" style="background:var(--warning-soft);color:var(--warning)">Nota interna</span>{% endif %}
+                <span class="muted small" title="{{ c.created_at|dt }}">{{ c.created_at|ago }}</span></div>
+              <div class="body">{{ c.body|nl2br }}
+                {% if c.attachments %}<div class="files">{% for a in c.attachments %}{{ attachment_link(a) }}{% endfor %}</div>{% endif %}</div>
+            </div>
+          </div>
+        {% else %}
+          {% set e = entry.item %}
+          <div class="tl-event"><strong>{{ e.user.name if e.user else "Sistema" }}</strong> {{ event_text(e) }} · <span title="{{ e.created_at|dt }}">{{ e.created_at|ago }}</span></div>
+        {% endif %}
+      {% else %}
+        <p class="muted">Nenhuma atividade ainda.</p>
+      {% endfor %}
+    </div>
+
+    {% if ticket.status not in ("closed", "cancelled") or me.is_agent %}
+    <div class="card composer no-print">
+      {% if me.is_agent %}
+      <div class="composer-tabs">
+        <button type="button" class="active" data-internal="0">Responder ao solicitante</button>
+        <button type="button" class="internal" data-internal="1">Nota interna</button>
+      </div>
+      {% endif %}
+      <form method="post" action="{{ url_for('tickets.comment', ticket_id=ticket.id) }}" enctype="multipart/form-data" class="card-body">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="internal" value="0">
+        <div class="field"><textarea name="body" rows="4" placeholder="{{ 'Escreva uma resposta ao solicitante…' if me.is_agent else 'Escreva uma mensagem para a equipe de T.I…' }}"></textarea></div>
+        {% if not me.is_agent and ticket.status == "resolved" and can_reopen %}<p class="small muted">Ao enviar uma mensagem, o chamado será reaberto.</p>{% endif %}
+        <div class="actions" style="justify-content: space-between">
+          <div><input type="file" name="files" multiple data-file-list="comment-files"><div id="comment-files" class="hint"></div></div>
+          <div class="actions">
+            {% if me.is_agent and ticket.is_open %}
+            <select name="then_status" style="width:auto">
+              <option value="">Manter status</option>
+              {% for k in ["in_progress", "waiting_user", "waiting_vendor"] if k != ticket.status %}<option value="{{ k }}">e mudar para: {{ STATUSES[k] }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <button class="btn btn-primary" data-submit-label="Enviar">Enviar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <aside>
+    {% if me.is_agent %}
+    <div class="card">
+      <div class="card-head"><h3>Detalhes</h3></div>
+      <form class="card-body" method="post" action="{{ url_for('tickets.update', ticket_id=ticket.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field"><label for="status">Status</label>
+          <select id="status" name="status" data-resolution-toggle="resolution-box">{% for k, v in STATUSES.items() %}<option value="{{ k }}" {{ 'selected' if ticket.status == k }}>{{ v }}</option>{% endfor %}</select></div>
+        <div id="resolution-box" class="hidden">
+          <div class="field"><label for="resolution_code">Código de encerramento</label>
+            <select id="resolution_code" name="resolution_code">{% for k, v in RESOLUTION_CODES.items() %}<option value="{{ k }}" {{ 'selected' if ticket.resolution_code == k }}>{{ v }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="resolution_notes">Solução aplicada</label>
+            <textarea id="resolution_notes" name="resolution_notes" rows="4" placeholder="Descreva a solução (visível para o solicitante)">{{ ticket.resolution_notes or '' }}</textarea></div>
+        </div>
+        <div class="field"><label for="group_id">Grupo</label>
+          <select id="group_id" name="group_id" data-group-select><option value="">— Nenhum —</option>{% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if ticket.group_id == g.id }}>{{ g.name }}</option>{% endfor %}
+          {% if ticket.group and not ticket.group.active %}<option value="{{ ticket.group.id }}" selected>{{ ticket.group.name }} (inativo)</option>{% endif %}</select></div>
+        <div class="field"><label for="assignee_id">Responsável</label>
+          <select id="assignee_id" name="assignee_id" data-assignee-select><option value="">— Ninguém —</option>{% for a in agents %}<option value="{{ a.id }}" data-name="{{ a.name }}" data-groups="{{ a.groups|map(attribute='id')|join(',') }}" {{ 'selected' if ticket.assignee_id == a.id }}>{{ a.name }}</option>{% endfor %}</select></div>
+        <div class="grid grid-2" style="gap:10px">
+          <div class="field"><label for="impact">Impacto</label><select id="impact" name="impact">{% for k, v in IMPACTS.items() %}<option value="{{ k }}" {{ 'selected' if ticket.impact == k }}>{{ v }}</option>{% endfor %}</select></div>
+          <div class="field"><label for="urgency">Urgência</label><select id="urgency" name="urgency">{% for k, v in URGENCIES.items() %}<option value="{{ k }}" {{ 'selected' if ticket.urgency == k }}>{{ v }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="field"><label for="type">Tipo</label><select id="type" name="type">{% for k, v in TYPES.items() %}<option value="{{ k }}" {{ 'selected' if ticket.type == k }}>{{ v }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="category_id">Categoria</label>
+          <select id="category_id" name="category_id"><option value="">— Nenhuma —</option>{% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if ticket.category_id == c.id }}>{{ c.name }}</option>{% endfor %}
+          {% if ticket.category and not ticket.category.active %}<option value="{{ ticket.category.id }}" selected>{{ ticket.category.name }} (inativa)</option>{% endif %}</select></div>
+        <div class="field"><label for="asset_id">Ativo</label>
+          <select id="asset_id" name="asset_id"><option value="">— Nenhum —</option>{% for a in assets %}<option value="{{ a.id }}" {{ 'selected' if ticket.asset_id == a.id }}>{{ a.display }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="title">Título</label><input id="title" name="title" value="{{ ticket.title }}" maxlength="200"></div>
+        <button class="btn btn-primary btn-block">Salvar alterações</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="card-head"><h3>Detalhes</h3></div>
+      <div class="card-body">
+        <dl class="meta-list">
+          <dt>Status</dt><dd>{{ status_badge(ticket) }}</dd>
+          <dt>Prioridade</dt><dd>{{ ticket.priority_label }}</dd>
+          <dt>Categoria</dt><dd>{{ ticket.category.name if ticket.category else "—" }}</dd>
+          <dt>Atendente</dt><dd>{{ ticket.assignee.name if ticket.assignee else "Aguardando" }}</dd>
+          {% if ticket.asset %}<dt>Equipamento</dt><dd>{{ ticket.asset.display }}</dd>{% endif %}
+          <dt>Aberto em</dt><dd>{{ ticket.created_at|dt }}</dd>
+          <dt>Previsão</dt><dd>{{ ticket.resolution_due|dt if ticket.is_open else "—" }}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if me.is_agent %}
+    <div class="card">
+      <div class="card-head"><h3>{{ icon('clock') }} SLA</h3></div>
+      <div class="card-body">
+        <dl class="meta-list">
+          {{ sla_line("1ª resposta", ticket.response_due, ticket.response_sla(now), ticket.first_response_at) }}
+          {{ sla_line("Solução", ticket.resolution_due, ticket.resolution_sla(now), ticket.resolved_at) }}
+          {% if ticket.sla_paused_minutes %}<dt>Tempo em espera</dt><dd>{{ ticket.sla_paused_minutes|duration }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>{{ icon('user') }} Solicitante</h3></div>
+      <div class="card-body">
+        <dl class="meta-list">
+          <dt>Nome</dt><dd>{{ ticket.requester.name }}</dd>
+          <dt>E-mail</dt><dd><a href="mailto:{{ ticket.requester.email }}">{{ ticket.requester.email }}</a></dd>
+          {% if ticket.requester.phone %}<dt>Telefone</dt><dd>{{ ticket.requester.phone }}</dd>{% endif %}
+          {% if ticket.requester.department %}<dt>Setor</dt><dd>{{ ticket.requester.department }}</dd>{% endif %}
+          <dt>Outros abertos</dt><dd>{% if other_open %}<a href="{{ url_for('tickets.list_tickets', view='abertos', q=ticket.requester.email) }}">{{ other_open }} chamado(s)</a>{% else %}Nenhum{% endif %}</dd>
+          {% if ticket.asset %}<dt>Ativo</dt><dd><a href="{{ url_for('assets.view', asset_id=ticket.asset.id) }}">{{ ticket.asset.display }}</a></dd>{% endif %}
+          {% if ticket.satisfaction %}<dt>Avaliação</dt><dd><span class="stars-view">{{ "★" * ticket.satisfaction }}</span>{% if ticket.satisfaction_comment %}<div class="small muted">{{ ticket.satisfaction_comment }}</div>{% endif %}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

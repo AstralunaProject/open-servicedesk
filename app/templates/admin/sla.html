@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}SLA e horários{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>SLA e horário de atendimento</h1><p>Prazos de primeira resposta e de solução por prioridade</p></div></div>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="dash-grid">
+    <div class="card span-7">
+      <div class="card-head"><h3>Prazos por prioridade (em horas)</h3></div>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Prioridade</th><th>1ª resposta (h)</th><th>Solução (h)</th></tr></thead>
+        <tbody>
+        {% for p, label in PRIORITIES.items() %}
+          {% set pol = policies.get(p) %}
+          <tr>
+            <td><span class="badge plain pr-{{ p }}">P{{ p }} · {{ label }}</span></td>
+            <td><input type="number" step="0.25" min="0.25" name="response_{{ p }}" value="{{ '%g'|format(pol.response_minutes / 60) if pol else '' }}" required></td>
+            <td><input type="number" step="0.25" min="0.25" name="resolution_{{ p }}" value="{{ '%g'|format(pol.resolution_minutes / 60) if pol else '' }}" required></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      <div class="card-body">
+        <p class="small muted">A prioridade é calculada automaticamente pela matriz <b>impacto × urgência</b> (padrão ITIL):</p>
+        <table class="table" style="max-width:420px">
+          <thead><tr><th>Impacto \ Urgência</th>{% for u, ul in URGENCIES.items() %}<th>{{ ul }}</th>{% endfor %}</tr></thead>
+          <tbody>{% for i, il in IMPACTS.items() %}<tr><td><b>{{ il }}</b></td>{% for u in URGENCIES %}{% set s = i + u %}{% set p = {2: 1, 3: 2, 4: 3}.get(s, 4) %}<td><span class="badge plain pr-{{ p }}">P{{ p }}</span></td>{% endfor %}</tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card span-5">
+      <div class="card-head"><h3>Horário comercial</h3></div>
+      <div class="card-body">
+        <label class="check"><input type="checkbox" name="business_hours_enabled" value="1" {{ 'checked' if cfg.business_hours_enabled == '1' }}> Contar o SLA apenas em horário comercial</label>
+        <p class="hint mb">Desmarcado = SLA corre 24×7.</p>
+        <div class="field"><label>Dias úteis</label>
+          <div class="checks">{% for d in weekdays %}<label class="check"><input type="checkbox" name="business_days" value="{{ loop.index0 }}" {{ 'checked' if loop.index0 in days }}> {{ d }}</label>{% endfor %}</div></div>
+        <div class="grid grid-2">
+          <div class="field"><label>Início</label><input type="time" name="business_start" value="{{ cfg.business_start }}"></div>
+          <div class="field"><label>Fim</label><input type="time" name="business_end" value="{{ cfg.business_end }}"></div>
+        </div>
+        <p class="hint">Chamados em “Aguardando solicitante” ou “Aguardando terceiro” têm o SLA pausado. Fuso horário: {{ cfg.timezone }} (altere em Configurações).</p>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary">Salvar</button></div>
+</form>
+{% endblock %}

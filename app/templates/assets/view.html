@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge %}
+{% block title %}{{ asset.tag }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><a class="small" href="{{ url_for('assets.index') }}">← Ativos</a><h1 class="mt">{{ asset.name }}</h1><p>{{ asset.tag }} · {{ asset.type }}</p></div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('tickets.new_ticket') }}">Abrir chamado</a>
+    <a class="btn btn-primary" href="{{ url_for('assets.edit', asset_id=asset.id) }}">Editar</a>
+    {% if me.is_admin %}<form method="post" action="{{ url_for('assets.delete', asset_id=asset.id) }}" data-confirm="Excluir este ativo?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger">Excluir</button></form>{% endif %}
+  </div>
+</div>
+<div class="dash-grid">
+  <div class="card span-5"><div class="card-head"><h3>Informações</h3></div><div class="card-body">
+    <dl class="meta-list">
+      <dt>Situação</dt><dd><span class="tag">{{ asset.status_label }}</span></dd>
+      <dt>Usuário</dt><dd>{{ asset.assigned_to.name if asset.assigned_to else "—" }}</dd>
+      <dt>Local</dt><dd>{{ asset.location or "—" }}</dd>
+      <dt>Fabricante</dt><dd>{{ asset.manufacturer or "—" }}</dd>
+      <dt>Modelo</dt><dd>{{ asset.model or "—" }}</dd>
+      <dt>Nº de série</dt><dd>{{ asset.serial or "—" }}</dd>
+      <dt>Compra</dt><dd>{{ asset.purchase_date|date }}</dd>
+      <dt>Garantia até</dt><dd>{{ asset.warranty_until|date }}{% if asset.warranty_until and asset.warranty_until < today %} <span class="small sla-breached">(vencida)</span>{% endif %}</dd>
+    </dl>
+    {% if asset.notes %}<hr><div>{{ asset.notes|nl2br }}</div>{% endif %}
+  </div></div>
+  <div class="card span-7"><div class="card-head"><h3>Histórico de chamados</h3></div>
+    <ul class="list">
+      {% for t in asset.tickets %}<li>{{ status_badge(t) }}<div class="grow ellipsis"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a><div class="small muted">{{ t.number }} · {{ t.created_at|dt }} · {{ t.requester.name }}</div></div></li>
+      {% else %}<li class="muted">Nenhum chamado vinculado.</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

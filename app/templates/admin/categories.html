@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Categorias{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Categorias</h1><p>Classificam os chamados e definem o grupo que recebe cada um automaticamente</p></div></div>
+<div class="card">
+  <div class="card-head"><h3>Nova categoria</h3></div>
+  <form class="card-body" method="post" action="{{ url_for('admin.category_save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="active" value="1">
+    <div class="grid grid-4" style="align-items:end">
+      <div class="field"><label>Nome</label><input name="name" required></div>
+      <div class="field"><label>Descrição</label><input name="description"></div>
+      <div class="field"><label>Grupo padrão</label><select name="default_group_id"><option value="">—</option>{% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select></div>
+      <div class="field"><button class="btn btn-primary btn-block">Adicionar</button></div>
+    </div>
+  </form>
+</div>
+<div class="card"><div class="table-wrap"><table class="table">
+  <thead><tr><th>Nome</th><th>Descrição</th><th>Grupo padrão</th><th>Ativa</th><th></th></tr></thead>
+  <tbody>
+  {% for c in categories %}
+    <tr>
+      <td><input form="cat-{{ c.id }}" name="name" value="{{ c.name }}" required></td>
+      <td><input form="cat-{{ c.id }}" name="description" value="{{ c.description or '' }}"></td>
+      <td><select form="cat-{{ c.id }}" name="default_group_id"><option value="">—</option>{% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if c.default_group_id == g.id }}>{{ g.name }}</option>{% endfor %}</select></td>
+      <td><input form="cat-{{ c.id }}" type="checkbox" name="active" value="1" {{ 'checked' if c.active }}></td>
+      <td class="nowrap"><form method="post" action="{{ url_for('admin.category_save', category_id=c.id) }}" id="cat-{{ c.id }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm">Salvar</button></form>
+        <form method="post" action="{{ url_for('admin.category_delete', category_id=c.id) }}" style="display:inline" data-confirm="Excluir a categoria {{ c.name }}?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger">Excluir</button></form></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

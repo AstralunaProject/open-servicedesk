@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon %}
+{% block title %}Grupos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Grupos de atendimento</h1><p>Filas de trabalho da equipe (ex.: Service Desk, Infraestrutura, Sistemas)</p></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.group_edit') }}">{{ icon('plus') }} Novo grupo</a></div>
+</div>
+<div class="card"><div class="table-wrap"><table class="table">
+  <thead><tr><th>Grupo</th><th>Membros</th><th>E-mail</th><th>Chamados abertos</th><th>Situação</th></tr></thead>
+  <tbody>
+  {% for g in groups %}
+    <tr class="row-link" data-href="{{ url_for('admin.group_edit', group_id=g.id) }}">
+      <td class="title-cell"><a href="{{ url_for('admin.group_edit', group_id=g.id) }}">{{ g.name }}</a><div class="sub">{{ g.description or "" }}</div></td>
+      <td class="small">{{ g.members|map(attribute='name')|join(', ') or "—" }}</td>
+      <td>{{ g.email or "—" }}</td>
+      <td><a href="{{ url_for('tickets.list_tickets', view='abertos', group=g.id) }}">{{ counts.get(g.id, 0) }}</a></td>
+      <td>{% if g.active %}<span class="badge st-resolved">Ativo</span>{% else %}<span class="badge st-closed">Inativo</span>{% endif %}</td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="empty">Nenhum grupo cadastrado.</td></tr>{% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

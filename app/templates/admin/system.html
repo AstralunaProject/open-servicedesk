@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon %}
+{% block title %}Sistema e backup{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Sistema e backup</h1><p>Versão {{ version }}</p></div></div>
+<div class="dash-grid">
+  <div class="card span-6">
+    <div class="card-head"><h3>Informações</h3></div>
+    <div class="card-body">
+      <dl class="meta-list">
+        <dt>Pasta de dados</dt><dd><code>{{ info.data_dir }}</code></dd>
+        <dt>Banco de dados</dt><dd><code>{{ info.database }}</code></dd>
+        {% if info.db_size is not none %}<dt>Tamanho do banco</dt><dd>{{ info.db_size|filesize }}</dd>{% endif %}
+        <dt>Chamados</dt><dd>{{ info.tickets }}</dd>
+        <dt>Usuários</dt><dd>{{ info.users }}</dd>
+        <dt>Anexos</dt><dd>{{ info.attachments }} ({{ info.attachments_size|filesize }})</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="card span-6">
+    <div class="card-head"><h3>Backup</h3></div>
+    <div class="card-body">
+      {% if info.sqlite %}
+      <p>Baixe um arquivo <code>.zip</code> com o banco de dados e todos os anexos. Guarde-o fora deste servidor.</p>
+      <form method="post" action="{{ url_for('admin.backup') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-primary">{{ icon('download') }} Baixar backup agora</button></form>
+      <p class="hint mt">Para backups automáticos, agende o comando <code>flask --app wsgi backup</code> (veja o README).</p>
+      <p class="hint"><b>Restaurar:</b> pare o sistema, extraia o .zip dentro da pasta de dados (substituindo <code>chamados.db</code> e <code>anexos/</code>) e inicie novamente.</p>
+      {% else %}
+      <p class="muted">O banco configurado não é SQLite. Use a ferramenta nativa do seu banco (ex.: <code>pg_dump</code>) e copie a pasta <code>{{ info.data_dir }}/anexos</code>.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

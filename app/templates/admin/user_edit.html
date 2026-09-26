@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ user.name if user.id else "Novo usuário" }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><a class="small" href="{{ url_for('admin.users') }}">← Usuários</a><h1 class="mt">{{ user.name if user.id else "Novo usuário" }}</h1>
+  {% if user.id %}<p>Cadastrado em {{ user.created_at|date }} · {{ tickets_count }} chamado(s) aberto(s) · <a href="{{ url_for('tickets.list_tickets', view='todos', q=user.email) }}">ver chamados</a></p>{% endif %}</div></div>
+<form method="post" class="card"><div class="card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% set f = request.form %}
+  <div class="grid grid-2">
+    <div class="field"><label>Nome</label><input name="name" value="{{ f.get('name', user.name or '') }}" required></div>
+    <div class="field"><label>E-mail (login)</label><input type="email" name="email" value="{{ f.get('email', user.email or '') }}" required></div>
+    <div class="field"><label>Setor</label><input name="department" value="{{ f.get('department', user.department or '') }}"></div>
+    <div class="field"><label>Telefone / ramal</label><input name="phone" value="{{ f.get('phone', user.phone or '') }}"></div>
+    <div class="field"><label>Perfil</label>
+      <select name="role">{% for k, v in ROLES.items() %}<option value="{{ k }}" {{ 'selected' if (f.get('role') or user.role) == k }}>{{ v }}</option>{% endfor %}</select>
+      <div class="hint"><b>Solicitante</b>: abre e acompanha os próprios chamados. <b>Técnico</b>: atende chamados, gerencia ativos e artigos. <b>Administrador</b>: tudo, inclusive configurações.</div></div>
+    <div class="field"><label>{{ "Nova senha" if user.id else "Senha inicial" }}</label><input type="password" name="password" minlength="8" autocomplete="new-password" {{ 'required' if not user.id }} placeholder="{{ 'Deixe vazio para manter' if user.id else '' }}"></div>
+  </div>
+  <div class="field"><label>Grupos de atendimento <span class="hint">(apenas técnicos e administradores)</span></label>
+    <div class="checks">{% for g in groups %}<label class="check"><input type="checkbox" name="groups" value="{{ g.id }}" {{ 'checked' if g in user.groups }}> {{ g.name }}</label>{% endfor %}</div></div>
+  <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if user.active or not user.id }}> Usuário ativo (pode acessar o sistema)</label>
+  <div class="form-actions"><a class="btn" href="{{ url_for('admin.users') }}">Cancelar</a><button class="btn btn-primary">Salvar</button></div>
+</div></form>
+{% endblock %}

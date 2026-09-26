@@ -1,0 +1,19 @@
+{% extends "auth_base.html" %}
+{% block title %}Criar conta{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block auth %}
+<h2>Criar conta</h2>
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="grid grid-2">
+    <div class="field"><label for="name">Nome completo</label><input id="name" name="name" value="{{ form.get('name', '') }}" required></div>
+    <div class="field"><label for="email">E-mail corporativo</label><input type="email" id="email" name="email" value="{{ form.get('email', '') }}" required></div>
+    <div class="field"><label for="department">Setor</label><input id="department" name="department" value="{{ form.get('department', '') }}"></div>
+    <div class="field"><label for="phone">Telefone / ramal</label><input id="phone" name="phone" value="{{ form.get('phone', '') }}"></div>
+    <div class="field"><label for="password">Senha</label><input type="password" id="password" name="password" minlength="8" required autocomplete="new-password"></div>
+    <div class="field"><label for="confirm">Confirmar senha</label><input type="password" id="confirm" name="confirm" minlength="8" required autocomplete="new-password"></div>
+  </div>
+  <button class="btn btn-primary btn-block" type="submit">Criar conta</button>
+</form>
+<div class="auth-links"><a href="{{ url_for('auth.login') }}">Já tenho conta</a></div>
+{% endblock %}

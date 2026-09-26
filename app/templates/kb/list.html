@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, pagination %}
+{% block title %}Base de conhecimento{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ "Base de conhecimento" if me.is_agent else "Ajuda e tutoriais" }}</h1><p>Respostas para as dúvidas mais comuns</p></div>
+  <div class="actions">{% if me.is_agent %}<a class="btn btn-primary" href="{{ url_for('kb.edit') }}">{{ icon('plus') }} Novo artigo</a>{% endif %}</div>
+</div>
+<div class="card">
+  <form class="filters" method="get" data-autosubmit>
+    <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar artigos…">
+    <select name="category"><option value="">Todas as categorias</option>{% for c in categories %}<option value="{{ c.id }}" {{ 'selected' if category == c.id|string }}>{{ c.name }}</option>{% endfor %}</select>
+    <button class="btn btn-sm">{{ icon('search') }} Buscar</button>
+  </form>
+  <div class="card-body">
+    {% if page.items %}
+    <div class="kb-grid">
+      {% for a in page.items %}
+      <a class="kb-card" href="{{ url_for('kb.view', article_id=a.id) }}">
+        <h3>{{ a.title }}</h3>
+        <p>{{ a.summary or (a.body[:140] ~ ('…' if a.body|length > 140 else '')) }}</p>
+        <div class="small muted mt">{% if a.category %}{{ a.category.name }} · {% endif %}{{ a.views }} visualizações
+          {% if me.is_agent %}{% if not a.published %} · <span class="tag">Rascunho</span>{% endif %}{% if a.internal %} · <span class="tag violet">Interno</span>{% endif %}{% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">{{ icon('book') }}<p>Nenhum artigo encontrado.</p>
+      {% if not me.is_agent %}<a class="btn btn-primary" href="{{ url_for('tickets.new_ticket') }}">Abrir um chamado</a>{% endif %}</div>
+    {% endif %}
+  </div>
+  {{ pagination(page, 'kb.index', {'q': q, 'category': category}) }}
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, status_badge %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<div class="hero">
+  <h1>Olá, {{ me.name.split()[0] }}! Como podemos ajudar?</h1>
+  <p>Pesquise na base de conhecimento ou abra um chamado para a equipe de T.I.</p>
+  <form action="{{ url_for('kb.index') }}"><input type="search" name="q" placeholder="Ex.: VPN, impressora, senha do e-mail…"><button class="btn">Buscar</button></form>
+</div>
+
+<div class="quick">
+  <a href="{{ url_for('tickets.new_ticket', type='incident') }}"><span class="ico">{{ icon('alert') }}</span><div><strong>Relatar um problema</strong><span>Algo parou de funcionar</span></div></a>
+  <a href="{{ url_for('tickets.new_ticket', type='request') }}"><span class="ico">{{ icon('plus') }}</span><div><strong>Fazer uma solicitação</strong><span>Acesso, software, equipamento</span></div></a>
+  <a href="{{ url_for('tickets.list_tickets') }}"><span class="ico">{{ icon('ticket') }}</span><div><strong>Meus chamados</strong><span>Acompanhe seus pedidos</span></div></a>
+  <a href="{{ url_for('kb.index') }}"><span class="ico">{{ icon('book') }}</span><div><strong>Tutoriais</strong><span>Resolva sozinho em minutos</span></div></a>
+</div>
+
+{% if to_rate %}
+<div class="card">
+  <div class="card-head"><h3>{{ icon('star') }} Avalie seus atendimentos</h3></div>
+  <ul class="list">
+    {% for t in to_rate %}<li><div class="grow"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}#avaliar">{{ t.title }}</a><div class="small muted">{{ t.number }} · resolvido {{ t.resolved_at|ago }}</div></div><a class="btn btn-sm" href="{{ url_for('tickets.detail', ticket_id=t.id) }}#avaliar">Avaliar</a></li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h3>Meus chamados em aberto</h3><a class="small" href="{{ url_for('tickets.list_tickets', view='todos') }}">Ver histórico</a></div>
+  <ul class="list">
+    {% for t in open_tickets %}
+      <li>{{ status_badge(t) }}<div class="grow ellipsis"><a href="{{ url_for('tickets.detail', ticket_id=t.id) }}">{{ t.title }}</a><div class="small muted">{{ t.number }} · aberto {{ t.created_at|ago }} · atualizado {{ t.updated_at|ago }}</div></div>
+      {% if t.status == "waiting_user" %}<span class="tag violet">Aguardando você</span>{% endif %}</li>
+    {% else %}<li class="muted">Você não tem chamados em aberto.</li>{% endfor %}
+  </ul>
+</div>
+
+{% if articles %}
+<h2 class="mt">Artigos mais acessados</h2>
+<div class="kb-grid">
+  {% for a in articles %}<a class="kb-card" href="{{ url_for('kb.view', article_id=a.id) }}"><h3>{{ a.title }}</h3><p>{{ a.summary or "" }}</p></a>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
