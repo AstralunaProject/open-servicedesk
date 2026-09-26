@@ -1,5 +1,7 @@
 # T.I Chamados
 
+[English](README.en.md) · **Português**
+
 Central de serviços de T.I para pequenas empresas: abertura e atendimento de chamados, SLA, base de conhecimento e inventário de equipamentos. Roda no seu próprio servidor (ou em qualquer PC da rede), sem mensalidade e sem enviar dados para fora.
 
 Pense em um "ServiceNow" enxuto: tudo o que uma equipe de 1 a 20 técnicos usa no dia a dia, instalado em minutos.
