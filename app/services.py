@@ -17,6 +17,7 @@ from .constants import (
     STATUS_IN_PROGRESS,
     STATUS_NEW,
     STATUS_RESOLVED,
+    STATUS_WAITING_USER,
     STATUSES,
     TYPES,
     URGENCIES,
@@ -188,7 +189,7 @@ def add_comment(ticket, author, body, *, internal=False, files=None) -> Comment:
     if author.is_agent and not internal and not is_requester and ticket.first_response_at is None:
         ticket.first_response_at = now
     if is_requester and not internal:
-        if ticket.status in PAUSED_STATUSES:
+        if ticket.status == STATUS_WAITING_USER:
             set_status(ticket, author, STATUS_IN_PROGRESS, commit=False, notify=False)
         elif ticket.status == STATUS_RESOLVED and can_reopen(author, ticket):
             set_status(ticket, author, STATUS_IN_PROGRESS, commit=False, notify=False)
@@ -242,9 +243,10 @@ def set_status(
     if new_status in PAUSED_STATUSES and old_status not in PAUSED_STATUSES:
         sla.pause(ticket, now)
 
-    if user and user.is_agent and user.id != ticket.requester_id and ticket.first_response_at is None:
-        if new_status != STATUS_NEW:
-            ticket.first_response_at = now
+    # Assumir ou mudar o status não é resposta; a solução, por ir ao solicitante, conta como uma.
+    agent_reply = user and user.is_agent and user.id != ticket.requester_id
+    if agent_reply and new_status == STATUS_RESOLVED and ticket.first_response_at is None:
+        ticket.first_response_at = now
 
     ticket.status = new_status
     ticket.updated_at = now

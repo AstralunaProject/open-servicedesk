@@ -68,6 +68,10 @@ def test_full_lifecycle(app, requester, agent):
     db.session.refresh(ticket)
     assert ticket.assignee_id == agent.id
     assert ticket.status == STATUS_IN_PROGRESS
+    assert ticket.first_response_at is None, "assumir o chamado não é uma resposta"
+
+    agent_client.post(f"/chamados/{ticket.id}/comentar", data={"body": "Estou verificando."})
+    db.session.refresh(ticket)
     assert ticket.first_response_at is not None
 
     agent_client.post(f"/chamados/{ticket.id}/atualizar", data={"status": "resolved"})
@@ -204,3 +208,20 @@ def test_csv_export_neutralizes_formulas(app, agent):
     row = csv.splitlines()[1].split(";")
     assert row[2].startswith("\"'=HYPERLINK")
     assert row[8] == "'@SUM(1+1)"
+
+
+def test_first_response_only_from_public_agent_reply(app, requester, agent):
+    ticket = services.create_ticket(requester, "Sem rede", "desc")
+    services.set_status(ticket, agent, STATUS_WAITING_USER)
+    services.add_comment(ticket, requester, "Segue o print")
+    services.add_comment(ticket, agent, "Nota", internal=True)
+    assert ticket.first_response_at is None
+    services.add_comment(ticket, agent, "Reinicie o roteador")
+    assert ticket.first_response_at is not None
+
+
+def test_requester_reply_does_not_resume_waiting_vendor(app, requester, agent):
+    ticket = services.create_ticket(requester, "Link caiu", "desc")
+    services.set_status(ticket, agent, "waiting_vendor")
+    services.add_comment(ticket, requester, "Alguma novidade?")
+    assert ticket.status == "waiting_vendor"
