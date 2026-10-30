@@ -21,7 +21,7 @@ from . import services
 from .constants import ROLE_USER, STATUS_CANCELLED, STATUS_CLOSED
 from .extensions import db
 from .models import Ticket, User
-from .settings import get_bool, get_setting
+from .settings import get_bool, get_int, get_setting
 
 log = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ def poll_mailbox() -> int:
     host = get_setting("imap_host").strip()
     if not get_bool("imap_enabled") or not host:
         return 0
-    port = int(get_setting("imap_port") or 993)
+    port = get_int("imap_port", 993)
     conn = imaplib.IMAP4_SSL(host, port) if port == 993 else imaplib.IMAP4(host, port)
     processed = 0
     try:

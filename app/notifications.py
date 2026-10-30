@@ -10,7 +10,7 @@ from flask import current_app
 from .constants import ROLE_ADMIN, ROLE_AGENT, STATUS_RESOLVED, STATUS_WAITING_USER
 from .extensions import db
 from .models import User
-from .settings import get_bool, get_setting
+from .settings import get_bool, get_int, get_setting
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 def smtp_config() -> dict:
     return {
         "host": get_setting("smtp_host").strip(),
-        "port": int(get_setting("smtp_port") or 587),
+        "port": get_int("smtp_port", 587),
         "security": get_setting("smtp_security") or "starttls",
         "user": get_setting("smtp_user"),
         "password": get_setting("smtp_password"),
@@ -69,8 +69,13 @@ def send_mail(recipients, subject: str, body: str) -> None:
     recipients = sorted({r.strip().lower() for r in recipients if r and "@" in r})
     if not recipients or not notifications_enabled():
         return
-    cfg = smtp_config()
-    msg = build_message(cfg, recipients, subject, body)
+    try:
+        cfg = smtp_config()
+        msg = build_message(cfg, recipients, subject, body)
+    except Exception:
+        # Uma notificação com problema não pode derrubar a ação que já foi gravada.
+        log.exception("Falha ao montar e-mail '%s'", subject)
+        return
     if current_app.config.get("TESTING") or current_app.config.get("MAIL_SUPPRESS"):
         current_app.extensions.setdefault("outbox", []).append(msg)
         return

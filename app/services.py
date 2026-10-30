@@ -106,6 +106,11 @@ def _as_int(value, allowed, default):
     return value if value in allowed else default
 
 
+def _clean_title(value) -> str:
+    # Quebras de linha no título iriam para o assunto dos e-mails.
+    return " ".join((value or "").split())[:200]
+
+
 def create_ticket(
     requester,
     title,
@@ -122,7 +127,7 @@ def create_ticket(
     asset=None,
     files=None,
 ) -> Ticket:
-    title = (title or "").strip()
+    title = _clean_title(title)
     if not title:
         raise ServiceError("Informe um título para o chamado.")
     if requester is None:
@@ -136,7 +141,7 @@ def create_ticket(
     now = utcnow()
     ticket = Ticket(
         type=type if type in TYPES else "incident",
-        title=title[:200],
+        title=title,
         description=(description or "").strip(),
         status=STATUS_NEW,
         impact=impact,
@@ -260,7 +265,7 @@ RELATIONS = (
 
 def _update_basic_fields(ticket, user, data) -> list:
     changed = []
-    title = (data.get("title") or "").strip()[:200]
+    title = _clean_title(data.get("title"))
     if title and title != ticket.title:
         log_event(ticket, user, "field", "title", ticket.title, title)
         ticket.title = title
