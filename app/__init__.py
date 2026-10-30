@@ -44,9 +44,10 @@ def create_app(test_config=None) -> Flask:
     register_filters(app)
 
     with app.app_context():
-        db.create_all()
         from .bootstrap import ensure_defaults
+        from .migrations import upgrade
 
+        upgrade()
         ensure_defaults()
 
     _register_hooks(app)

@@ -27,7 +27,7 @@ Think of it as a lean "ServiceNow": everything a team of 1 to 20 technicians nee
 **SLA**
 - First-response and resolution targets per priority
 - Business-hours counting (configurable days and hours) or 24×7
-- Automatic pause while the ticket is waiting on the requester or a third party
+- Automatic pause while the ticket is waiting on the requester or a third party, and while it is resolved: if it is reopened, the clock resumes where it stopped
 
 **Management**
 - Dashboard with KPIs: open, overdue, average resolution time, SLA compliance, satisfaction
@@ -139,6 +139,16 @@ helpdesk.yourcompany.com {
 
 To restore, stop the system, extract the `.zip` into the data folder (replacing `chamados.db` and `anexos/`) and start it again.
 
+## Updating
+
+Take a backup and get the new version (`git pull` or the ZIP). Then:
+
+- **Docker:** `docker compose up -d --build`
+- **Linux:** run `sudo ./scripts/instalar-linux.sh` again (keeps data and `.env`)
+- **Windows and manual:** restart the service or `run.py`
+
+On startup the system upgrades the database by itself and logs each step it applies.
+
 ## Useful commands
 
 ```bash
@@ -192,6 +202,7 @@ app/
   constants.py      statuses, priorities, roles and other domain values
   services.py       ticket business rules (shared by web, API and e-mail)
   sla.py            deadlines and business hours
+  migrations.py     schema versions, applied on startup
   mail_inbound.py   IMAP mailbox reader
   notifications.py  outgoing e-mails
   views/            web and API routes
