@@ -4,7 +4,7 @@ from app import services
 from app.constants import STATUS_CLOSED, STATUS_IN_PROGRESS, STATUS_RESOLVED, STATUS_WAITING_USER
 from app.extensions import db
 from app.models import Category, Comment, Ticket, utcnow
-from app.settings import set_setting
+from app.settings import get_setting, set_setting
 
 from .conftest import login, make_user
 
@@ -68,6 +68,10 @@ def test_full_lifecycle(app, requester, agent):
     db.session.refresh(ticket)
     assert ticket.assignee_id == agent.id
     assert ticket.status == STATUS_IN_PROGRESS
+    assert ticket.first_response_at is None, "assumir o chamado não é uma resposta"
+
+    agent_client.post(f"/chamados/{ticket.id}/comentar", data={"body": "Estou verificando."})
+    db.session.refresh(ticket)
     assert ticket.first_response_at is not None
 
     agent_client.post(f"/chamados/{ticket.id}/atualizar", data={"status": "resolved"})
@@ -151,3 +155,73 @@ def test_dashboard_renders_for_agent(app, requester, agent):
     page = login(app, agent).get("/").data.decode()
     assert "Em aberto" in page
     assert "Impressora não imprime" in page
+
+
+def _enable_mail():
+    set_setting("notify_enabled", "1")
+    set_setting("smtp_host", "smtp.test")
+    set_setting("smtp_from", "suporte@empresa.com")
+    db.session.commit()
+
+
+def test_line_breaks_in_title_do_not_break_notifications(app, requester, agent):
+    _enable_mail()
+    ticket = services.create_ticket(requester, "Impressora\r\nBcc: x@y.com", "desc")
+    assert ticket.title == "Impressora Bcc: x@y.com"
+    services.update_ticket(ticket, agent, {"title": "Outro\ntítulo", "assignee_id": agent.id})
+    assert ticket.title == "Outro título"
+    services.add_comment(ticket, agent, "Verificando")
+    assert all("\n" not in m["Subject"] for m in app.extensions["outbox"])
+
+
+def test_notification_failure_does_not_break_request(app, requester, agent, monkeypatch):
+    from app import notifications
+
+    _enable_mail()
+
+    def broken(*args, **kwargs):
+        raise ValueError("cabeçalho inválido")
+
+    monkeypatch.setattr(notifications, "build_message", broken)
+    client = login(app, requester)
+    ticket = open_ticket(client)
+    response = client.post(f"/chamados/{ticket.id}/comentar", data={"body": "Alguma novidade?"})
+    assert response.status_code == 302
+    assert len(ticket.comments) == 1
+
+
+def test_admin_rejects_non_numeric_ports(app, admin):
+    client = login(app, admin)
+    smtp = {"section": "smtp", "smtp_host": "smtp.test", "smtp_port": "abc"}
+    imap = {"section": "imap", "imap_host": "imap.test", "imap_port": "99999"}
+    client.post("/admin/configuracoes", data=smtp)
+    client.post("/admin/configuracoes", data=imap)
+    assert get_setting("smtp_port") == "587"
+    assert get_setting("imap_port") == "993"
+    assert get_setting("smtp_host") == "smtp.test"
+
+
+def test_csv_export_neutralizes_formulas(app, agent):
+    evil = make_user("evil@empresa.com", name="@SUM(1+1)")
+    services.create_ticket(evil, '=HYPERLINK("http://x","clique")', "desc")
+    csv = login(app, agent).get("/chamados/exportar.csv?view=todos").data.decode("utf-8-sig")
+    row = csv.splitlines()[1].split(";")
+    assert row[2].startswith("\"'=HYPERLINK")
+    assert row[8] == "'@SUM(1+1)"
+
+
+def test_first_response_only_from_public_agent_reply(app, requester, agent):
+    ticket = services.create_ticket(requester, "Sem rede", "desc")
+    services.set_status(ticket, agent, STATUS_WAITING_USER)
+    services.add_comment(ticket, requester, "Segue o print")
+    services.add_comment(ticket, agent, "Nota", internal=True)
+    assert ticket.first_response_at is None
+    services.add_comment(ticket, agent, "Reinicie o roteador")
+    assert ticket.first_response_at is not None
+
+
+def test_requester_reply_does_not_resume_waiting_vendor(app, requester, agent):
+    ticket = services.create_ticket(requester, "Link caiu", "desc")
+    services.set_status(ticket, agent, "waiting_vendor")
+    services.add_comment(ticket, requester, "Alguma novidade?")
+    assert ticket.status == "waiting_vendor"

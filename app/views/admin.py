@@ -11,7 +11,7 @@ from ..backup import create_backup, sqlite_path
 from ..constants import PRIORITIES, ROLE_ADMIN, ROLES
 from ..extensions import db
 from ..models import Attachment, Category, Group, SLAPolicy, Ticket, User
-from ..settings import DEFAULTS, get_setting, set_setting
+from ..settings import DEFAULTS, get_int, get_setting, set_setting
 from ..utils import admin_required
 from .auth import MIN_PASSWORD, find_user_by_email
 
@@ -264,6 +264,10 @@ SMTP_KEYS = ("smtp_host", "smtp_port", "smtp_security", "smtp_user", "smtp_from"
 IMAP_KEYS = ("imap_host", "imap_port", "imap_user", "imap_folder", "imap_interval")
 
 
+def _valid_port(value: str) -> bool:
+    return value.isascii() and value.isdigit() and 0 < int(value) < 65536
+
+
 @bp.route("/configuracoes", methods=["GET", "POST"])
 @admin_required
 def settings():
@@ -288,13 +292,21 @@ def settings():
                 set_setting(key, "1" if request.form.get(key) else "0")
         elif section == "smtp":
             for key in SMTP_KEYS:
-                set_setting(key, request.form.get(key, "").strip())
+                value = request.form.get(key, "").strip()
+                if key == "smtp_port" and not _valid_port(value):
+                    flash("Porta SMTP inválida; mantida a anterior.", "error")
+                    continue
+                set_setting(key, value)
             set_setting("notify_enabled", "1" if request.form.get("notify_enabled") else "0")
             if request.form.get("smtp_password"):
                 set_setting("smtp_password", request.form["smtp_password"])
         elif section == "imap":
             for key in IMAP_KEYS:
-                set_setting(key, request.form.get(key, "").strip())
+                value = request.form.get(key, "").strip()
+                if key == "imap_port" and not _valid_port(value):
+                    flash("Porta IMAP inválida; mantida a anterior.", "error")
+                    continue
+                set_setting(key, value)
             for key in ("imap_enabled", "imap_create_users"):
                 set_setting(key, "1" if request.form.get(key) else "0")
             if request.form.get("imap_password"):
@@ -334,7 +346,7 @@ def test_imap():
     if not host:
         flash("Configure o servidor IMAP primeiro.", "error")
         return redirect(url_for("admin.settings", _anchor="imap"))
-    port = int(get_setting("imap_port") or 993)
+    port = get_int("imap_port", 993)
     try:
         conn = (
             imaplib.IMAP4_SSL(host, port, timeout=15)

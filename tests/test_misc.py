@@ -37,3 +37,9 @@ def test_kb_drafts_hidden_from_requesters(app, requester, agent):
 
 def test_health_endpoint(app):
     assert app.test_client().get("/saude").get_json() == {"status": "ok"}
+
+
+def test_markdown_ignores_nul_characters():
+    html = markdown("`a` texto \x005\x00 fim")
+    assert "<code>a</code>" in html
+    assert "\x00" not in html

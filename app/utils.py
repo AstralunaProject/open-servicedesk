@@ -148,7 +148,8 @@ def markdown(text) -> Markup:
     """
     if not text:
         return Markup("")
-    lines = str(escape(text)).replace("\r\n", "\n").split("\n")
+    # NUL é usado internamente por _inline para marcar trechos de código.
+    lines = str(escape(str(text).replace("\x00", ""))).replace("\r\n", "\n").split("\n")
     html, paragraph, list_type, in_code, code = [], [], None, False, []
 
     def flush_paragraph():

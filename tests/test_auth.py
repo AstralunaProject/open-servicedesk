@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models import Category, Group, User
+from app.settings import set_setting
 
 from .conftest import PASSWORD, login
 
@@ -88,3 +89,68 @@ def test_registration_respects_allowed_domains(app, admin):
     assert db.session.scalar(db.select(User).where(User.email == "ze@gmail.com")) is None
     client.post("/cadastro", data={**data, "email": "ze@empresa.com"})
     assert db.session.scalar(db.select(User).where(User.email == "ze@empresa.com")) is not None
+
+
+def _enable_mail():
+    set_setting("notify_enabled", "1")
+    set_setting("smtp_host", "smtp.test")
+    set_setting("smtp_from", "suporte@empresa.com")
+    db.session.commit()
+
+
+def test_reset_link_ignores_host_header(app, requester):
+    _enable_mail()
+    client = app.test_client()
+    client.post("/esqueci-senha", data={"email": requester.email}, headers={"Host": "evil.example"})
+    body = app.extensions["outbox"][-1].get_content()
+    assert "http://chamados.test/redefinir-senha/" in body
+    assert "evil.example" not in body
+
+
+def test_reset_not_sent_without_base_url(app, requester):
+    _enable_mail()
+    app.config["BASE_URL"] = ""
+    client = app.test_client()
+    response = client.post(
+        "/esqueci-senha", data={"email": requester.email}, headers={"Host": "evil.example"}
+    )
+    assert response.status_code == 302
+    assert not app.extensions.get("outbox")
+
+
+def test_remember_cookie_follows_session_cookie_secure(tmp_path, monkeypatch):
+    from app import create_app
+
+    monkeypatch.setenv("SESSION_COOKIE_SECURE", "1")
+    app = create_app({"TESTING": True, "DATA_DIR": str(tmp_path), "SECRET_KEY": "x"})
+    assert app.config["SESSION_COOKIE_SECURE"] is True
+    assert app.config["REMEMBER_COOKIE_SECURE"] is True
+    assert app.config["REMEMBER_COOKIE_SAMESITE"] == "Lax"
+
+
+def test_password_change_ends_other_sessions(app, requester):
+    current = login(app, requester)
+    other = login(app, requester)
+    data = {"current": PASSWORD, "password": "nova-senha-123", "confirm": "nova-senha-123"}
+    current.post("/perfil/senha", data=data)
+    assert current.get("/perfil").status_code == 200
+    assert other.get("/perfil").status_code == 302
+
+
+def test_password_reset_ends_open_sessions(app, requester):
+    from app.views.auth import _serializer
+
+    client = login(app, requester)
+    token = _serializer().dumps({"id": requester.id, "h": requester.password_hash[-16:]})
+    app.test_client().post(
+        f"/redefinir-senha/{token}", data={"password": "nova-senha-123", "confirm": "nova-senha-123"}
+    )
+    assert client.get("/perfil").status_code == 302
+
+
+def test_api_token_still_works_after_password_change(app, requester):
+    token = requester.generate_api_token()
+    requester.set_password("nova-senha-123")
+    db.session.commit()
+    response = app.test_client().get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200

@@ -107,7 +107,7 @@ Most settings are managed in the web interface, under **Administração → Conf
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `8080` | HTTP port |
-| `BASE_URL` | — | Public address used in e-mail links |
+| `BASE_URL` | — | Public address used in e-mail links (required for password reset by e-mail) |
 | `CHAMADOS_DATA_DIR` | `./data` | Database, attachments, backups and secret key |
 | `DATABASE_URL` | SQLite in `DATA_DIR` | e.g. `postgresql+psycopg://user:password@host/chamados` (install `psycopg`) |
 | `MAX_UPLOAD_MB` | `20` | Maximum attachment size |

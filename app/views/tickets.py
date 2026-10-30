@@ -81,6 +81,13 @@ def list_tickets():
     )
 
 
+def _csv_cell(value):
+    # Evita que o Excel interprete textos digitados pelo usuário como fórmulas.
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value
+
+
 @bp.route("/exportar.csv")
 @agent_required
 def export_csv():
@@ -118,28 +125,27 @@ def export_csv():
         "paused": "Pausado",
     }
     for t in db.session.scalars(query):
-        writer.writerow(
-            [
-                t.number,
-                t.type_label,
-                t.title,
-                t.status_label,
-                t.priority_label,
-                t.category.name if t.category else "",
-                t.group.name if t.group else "",
-                t.assignee.name if t.assignee else "",
-                t.requester.name,
-                t.requester.email,
-                t.requester.department or "",
-                t.channel_label,
-                fmt_datetime(t.created_at),
-                fmt_datetime(t.first_response_at) if t.first_response_at else "",
-                fmt_datetime(t.resolved_at) if t.resolved_at else "",
-                fmt_datetime(t.resolution_due) if t.resolution_due else "",
-                sla_labels.get(t.resolution_sla(), ""),
-                t.satisfaction or "",
-            ]
-        )
+        row = [
+            t.number,
+            t.type_label,
+            t.title,
+            t.status_label,
+            t.priority_label,
+            t.category.name if t.category else "",
+            t.group.name if t.group else "",
+            t.assignee.name if t.assignee else "",
+            t.requester.name,
+            t.requester.email,
+            t.requester.department or "",
+            t.channel_label,
+            fmt_datetime(t.created_at),
+            fmt_datetime(t.first_response_at) if t.first_response_at else "",
+            fmt_datetime(t.resolved_at) if t.resolved_at else "",
+            fmt_datetime(t.resolution_due) if t.resolution_due else "",
+            sla_labels.get(t.resolution_sla(), ""),
+            t.satisfaction or "",
+        ]
+        writer.writerow([_csv_cell(v) for v in row])
     filename = f"chamados-{utcnow():%Y%m%d-%H%M}.csv"
     return Response(
         buffer.getvalue(),
