@@ -62,6 +62,8 @@ def load_config(app, test_config=None) -> None:
         "SESSION_COOKIE_SAMESITE": "Lax",
         "SESSION_COOKIE_SECURE": _env_bool("SESSION_COOKIE_SECURE"),
         "REMEMBER_COOKIE_HTTPONLY": True,
+        "REMEMBER_COOKIE_SAMESITE": "Lax",
+        "REMEMBER_COOKIE_SECURE": _env_bool("SESSION_COOKIE_SECURE"),
         "REMEMBER_COOKIE_DURATION": timedelta(days=14),
         "PERMANENT_SESSION_LIFETIME": timedelta(hours=12),
         "WTF_CSRF_TIME_LIMIT": None,

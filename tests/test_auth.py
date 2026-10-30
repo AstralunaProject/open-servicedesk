@@ -116,3 +116,13 @@ def test_reset_not_sent_without_base_url(app, requester):
     )
     assert response.status_code == 302
     assert not app.extensions.get("outbox")
+
+
+def test_remember_cookie_follows_session_cookie_secure(tmp_path, monkeypatch):
+    from app import create_app
+
+    monkeypatch.setenv("SESSION_COOKIE_SECURE", "1")
+    app = create_app({"TESTING": True, "DATA_DIR": str(tmp_path), "SECRET_KEY": "x"})
+    assert app.config["SESSION_COOKIE_SECURE"] is True
+    assert app.config["REMEMBER_COOKIE_SECURE"] is True
+    assert app.config["REMEMBER_COOKIE_SAMESITE"] == "Lax"
