@@ -78,3 +78,13 @@ def test_notifications_are_sent_when_enabled(app, requester, agent):
     subjects = [m["Subject"] for m in outbox]
     assert any(ticket.number in s and "Chamado aberto" in s for s in subjects)
     assert any(agent.email in m["To"] for m in outbox)
+
+
+def test_reply_from_agent_address_is_not_accepted(app, requester, agent):
+    ticket = mail_inbound.process_message(raw_email(requester.email, "Sem acesso", "Não entra"))
+    forged = mail_inbound.process_message(
+        raw_email(agent.email, f"RE: [{ticket.number}] Sem acesso", "Resolvido, pode fechar")
+    )
+    assert forged is None
+    assert ticket.comments == []
+    assert db.session.scalar(db.select(db.func.count(Ticket.id))) == 1

@@ -115,6 +115,10 @@ def process_message(raw: bytes):
     ticket = db.session.get(Ticket, int(match.group(1))) if match else None
     if ticket and not services.can_view(user, ticket):
         ticket = None
+    if ticket and ticket.requester_id != user.id:
+        # O remetente não é autenticado; só o solicitante pode responder por e-mail.
+        log.warning("Resposta por e-mail de %s ao chamado %s ignorada", address, ticket.number)
+        return None
     if ticket and ticket.status not in (STATUS_CLOSED, STATUS_CANCELLED):
         services.add_comment(ticket, user, strip_reply(body) or "(sem texto)", files=files)
         return ticket
