@@ -202,6 +202,7 @@ def change_password():
         return redirect(url_for("auth.profile"))
     current_user.set_password(request.form["password"])
     db.session.commit()
+    login_user(current_user._get_current_object())
     flash("Senha alterada.", "success")
     return redirect(url_for("auth.profile"))
 

@@ -126,3 +126,31 @@ def test_remember_cookie_follows_session_cookie_secure(tmp_path, monkeypatch):
     assert app.config["SESSION_COOKIE_SECURE"] is True
     assert app.config["REMEMBER_COOKIE_SECURE"] is True
     assert app.config["REMEMBER_COOKIE_SAMESITE"] == "Lax"
+
+
+def test_password_change_ends_other_sessions(app, requester):
+    current = login(app, requester)
+    other = login(app, requester)
+    data = {"current": PASSWORD, "password": "nova-senha-123", "confirm": "nova-senha-123"}
+    current.post("/perfil/senha", data=data)
+    assert current.get("/perfil").status_code == 200
+    assert other.get("/perfil").status_code == 302
+
+
+def test_password_reset_ends_open_sessions(app, requester):
+    from app.views.auth import _serializer
+
+    client = login(app, requester)
+    token = _serializer().dumps({"id": requester.id, "h": requester.password_hash[-16:]})
+    app.test_client().post(
+        f"/redefinir-senha/{token}", data={"password": "nova-senha-123", "confirm": "nova-senha-123"}
+    )
+    assert client.get("/perfil").status_code == 302
+
+
+def test_api_token_still_works_after_password_change(app, requester):
+    token = requester.generate_api_token()
+    requester.set_password("nova-senha-123")
+    db.session.commit()
+    response = app.test_client().get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200

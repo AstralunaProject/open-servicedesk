@@ -62,6 +62,14 @@ class User(UserMixin, db.Model):
         return bool(self.password_hash) and check_password_hash(self.password_hash, password)
 
     @property
+    def session_version(self) -> str:
+        return hashlib.sha256((self.password_hash or "").encode()).hexdigest()[:16]
+
+    def get_id(self) -> str:
+        # Trocar a senha muda a versão e encerra as sessões abertas em outros lugares.
+        return f"{self.id}:{self.session_version}"
+
+    @property
     def is_active(self) -> bool:  # usado pelo Flask-Login
         return bool(self.active)
 
@@ -99,7 +107,13 @@ class User(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    uid, _, version = str(user_id).partition(":")
+    if not uid.isdigit():
+        return None
+    user = db.session.get(User, int(uid))
+    if user is None or version != user.session_version:
+        return None
+    return user
 
 
 class Group(db.Model):
