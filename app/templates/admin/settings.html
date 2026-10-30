@@ -50,7 +50,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="imap">
     <p class="muted">Os e-mails não lidos da caixa (ex.: <code>suporte@empresa.com.br</code>) viram chamados. Respostas com <code>[{{ cfg.ticket_prefix }}000123]</code> no assunto são adicionadas ao chamado existente.</p>
     <label class="check"><input type="checkbox" name="imap_enabled" value="1" {{ 'checked' if cfg.imap_enabled == '1' }}> Ler a caixa de entrada periodicamente</label>
-    <label class="check"><input type="checkbox" name="imap_create_users" value="1" {{ 'checked' if cfg.imap_create_users == '1' }}> Criar solicitante automaticamente para remetentes desconhecidos</label>
+    <label class="check"><input type="checkbox" name="imap_create_users" value="1" {{ 'checked' if cfg.imap_create_users == '1' }}> Criar solicitante automaticamente para remetentes desconhecidos (respeita os domínios permitidos no cadastro)</label>
     <div class="grid grid-3">
       <div class="field"><label>Servidor IMAP</label><input name="imap_host" value="{{ cfg.imap_host }}" placeholder="outlook.office365.com"></div>
       <div class="field"><label>Porta</label><input type="number" name="imap_port" value="{{ cfg.imap_port }}"><div class="hint">993 = SSL; outra porta usa STARTTLS</div></div>

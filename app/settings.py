@@ -31,7 +31,7 @@ DEFAULTS = {
     "imap_password": "",
     "imap_folder": "INBOX",
     "imap_interval": "5",
-    "imap_create_users": "1",
+    "imap_create_users": "0",
 }
 
 

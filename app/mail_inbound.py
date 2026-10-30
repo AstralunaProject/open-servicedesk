@@ -83,6 +83,11 @@ def _find_or_create_user(address: str, name: str):
     user = db.session.scalar(db.select(User).where(db.func.lower(User.email) == address.lower()))
     if user or not get_bool("imap_create_users"):
         return user
+    domains = [
+        d.strip().lower().lstrip("@") for d in get_setting("registration_domains").split(",") if d.strip()
+    ]
+    if domains and address.split("@")[-1].lower() not in domains:
+        return None
     user = User(name=name or address.split("@")[0], email=address.lower(), role=ROLE_USER)
     user.set_password(secrets.token_urlsafe(24))  # usuário pode usar "Esqueci minha senha"
     db.session.add(user)
@@ -90,11 +95,19 @@ def _find_or_create_user(address: str, name: str):
     return user
 
 
+def _is_automated(msg) -> bool:
+    if (msg.get("Auto-Submitted") or "no").strip().lower() != "no":
+        return True
+    if (msg.get("Precedence") or "").strip().lower() in ("bulk", "list", "junk"):
+        return True
+    return msg.get("List-Id") is not None or (msg.get("Return-Path") or "").strip() == "<>"
+
+
 def process_message(raw: bytes):
     """Processa um e-mail bruto. Retorna o chamado criado/atualizado ou None."""
     msg = email.message_from_bytes(raw, policy=policy.default)
-    if (msg.get("Auto-Submitted") or "no").lower() != "no":
-        return None  # ignora respostas automáticas (férias, bounces) para evitar loops
+    if _is_automated(msg):
+        return None  # ignora respostas automáticas, bounces e listas para evitar loops
     name, address = parseaddr(str(msg.get("From", "")))
     if not address or "@" not in address:
         return None
