@@ -46,6 +46,22 @@ def test_login_blocks_after_repeated_failures(app, requester):
     assert response.status_code == 429
 
 
+def test_login_blocks_ip_trying_many_emails(app, requester):
+    client = app.test_client()
+    for i in range(50):
+        client.post("/entrar", data={"email": f"alvo{i}@empresa.com", "password": "errada"})
+    response = client.post("/entrar", data={"email": requester.email, "password": PASSWORD})
+    assert response.status_code == 429
+
+    other_ip = app.test_client()
+    response = other_ip.post(
+        "/entrar",
+        data={"email": requester.email, "password": PASSWORD},
+        environ_base={"REMOTE_ADDR": "10.0.0.2"},
+    )
+    assert response.status_code == 302
+
+
 def test_inactive_user_cannot_login(app, requester):
     requester.active = False
     db.session.commit()
@@ -154,3 +170,12 @@ def test_api_token_still_works_after_password_change(app, requester):
     db.session.commit()
     response = app.test_client().get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
+
+
+def test_reset_requests_are_limited_per_ip(app, requester):
+    _enable_mail()
+    client = app.test_client()
+    for _ in range(5):
+        assert client.post("/esqueci-senha", data={"email": requester.email}).status_code == 302
+    assert client.post("/esqueci-senha", data={"email": requester.email}).status_code == 429
+    assert len(app.extensions["outbox"]) == 5
