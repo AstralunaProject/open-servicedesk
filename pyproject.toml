@@ -1,7 +1,8 @@
 [project]
 name = "open-servicedesk"
 version = "1.0.0"
-description = "Central de serviços de T.I auto-hospedada para pequenas empresas"
+description = "Central de serviços de T.I auto-hospedada para pequenas empresas: sistema de chamados, SLA, base de conhecimento e inventário"
+keywords = ["helpdesk", "service-desk", "sistema-de-chamados", "ticketing", "itsm", "sla", "knowledge-base", "asset-management", "self-hosted", "flask"]
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "AstralunaProject" }]

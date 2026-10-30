@@ -200,6 +200,14 @@ app/
 run.py              production server (Waitress)
 ```
 
+## FAQ
+
+**Is it free?** Yes. MIT-licensed, no subscription and no limit on technicians, users or tickets.
+
+**Is it an alternative to GLPI, osTicket or Zammad?** For small teams, yes: ticketing (help desk), business-hours SLAs, knowledge base, asset inventory and email-to-ticket, installed in minutes with Docker or the installer.
+
+**Does it need internet access?** No. It runs on your intranet with no CDN or external services; internet is only used for email if you configure it.
+
 ## License
 
 [MIT](LICENSE) © AstralunaProject
