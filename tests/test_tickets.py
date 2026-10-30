@@ -1,4 +1,5 @@
 import io
+from datetime import timedelta
 
 from app import services
 from app.constants import STATUS_CLOSED, STATUS_IN_PROGRESS, STATUS_RESOLVED, STATUS_WAITING_USER
@@ -225,3 +226,30 @@ def test_requester_reply_does_not_resume_waiting_vendor(app, requester, agent):
     services.set_status(ticket, agent, "waiting_vendor")
     services.add_comment(ticket, requester, "Alguma novidade?")
     assert ticket.status == "waiting_vendor"
+
+
+def test_time_spent_resolved_does_not_count_after_reopening(app, requester, agent):
+    ticket = services.create_ticket(requester, "VPN não conecta", "desc")
+    due = ticket.resolution_due
+    services.set_status(ticket, agent, STATUS_RESOLVED, resolution_notes="Certificado renovado")
+    assert ticket.sla_paused_at is not None
+
+    ticket.sla_paused_at -= timedelta(days=3)
+    services.add_comment(ticket, requester, "Voltou a cair")
+    assert ticket.status == STATUS_IN_PROGRESS
+    assert ticket.sla_paused_at is None
+    assert ticket.resolution_due - due >= timedelta(days=3)
+    assert ticket.resolution_sla() == "ok"
+
+
+def test_waiting_time_is_credited_before_resolving(app, requester, agent):
+    ticket = services.create_ticket(requester, "Teclado falhando", "desc")
+    due = ticket.resolution_due
+    services.set_status(ticket, agent, STATUS_WAITING_USER)
+    ticket.sla_paused_at -= timedelta(hours=2)
+    services.set_status(ticket, agent, STATUS_RESOLVED, resolution_notes="Teclado trocado")
+    assert ticket.resolution_due - due >= timedelta(hours=2)
+    assert ticket.sla_paused_at is not None
+
+    services.set_status(ticket, agent, STATUS_CLOSED)
+    assert ticket.resolution_sla() == "met"
