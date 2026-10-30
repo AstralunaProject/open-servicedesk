@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models import Category, Group, User
+from app.settings import set_setting
 
 from .conftest import PASSWORD, login
 
@@ -88,3 +89,30 @@ def test_registration_respects_allowed_domains(app, admin):
     assert db.session.scalar(db.select(User).where(User.email == "ze@gmail.com")) is None
     client.post("/cadastro", data={**data, "email": "ze@empresa.com"})
     assert db.session.scalar(db.select(User).where(User.email == "ze@empresa.com")) is not None
+
+
+def _enable_mail():
+    set_setting("notify_enabled", "1")
+    set_setting("smtp_host", "smtp.test")
+    set_setting("smtp_from", "suporte@empresa.com")
+    db.session.commit()
+
+
+def test_reset_link_ignores_host_header(app, requester):
+    _enable_mail()
+    client = app.test_client()
+    client.post("/esqueci-senha", data={"email": requester.email}, headers={"Host": "evil.example"})
+    body = app.extensions["outbox"][-1].get_content()
+    assert "http://chamados.test/redefinir-senha/" in body
+    assert "evil.example" not in body
+
+
+def test_reset_not_sent_without_base_url(app, requester):
+    _enable_mail()
+    app.config["BASE_URL"] = ""
+    client = app.test_client()
+    response = client.post(
+        "/esqueci-senha", data={"email": requester.email}, headers={"Host": "evil.example"}
+    )
+    assert response.status_code == 302
+    assert not app.extensions.get("outbox")

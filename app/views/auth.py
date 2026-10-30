@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 
@@ -13,6 +14,7 @@ from ..models import User, utcnow
 from ..settings import get_bool, get_setting, set_setting
 
 bp = Blueprint("auth", __name__)
+log = logging.getLogger(__name__)
 
 MIN_PASSWORD = 8
 _failures_lock = threading.Lock()
@@ -227,7 +229,9 @@ def forgot_password():
     email_enabled = notifications.notifications_enabled()
     if request.method == "POST" and email_enabled:
         user = find_user_by_email(request.form.get("email", ""))
-        if user and user.active:
+        if user and user.active and not current_app.config.get("BASE_URL"):
+            log.warning("BASE_URL não configurada; redefinição de senha não enviada para %s", user.email)
+        elif user and user.active:
             token = _serializer().dumps({"id": user.id, "h": (user.password_hash or "")[-16:]})
             link = f"{notifications.base_url()}{url_for('auth.reset_password', token=token)}"
             notifications.password_reset(user, link)

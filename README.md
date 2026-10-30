@@ -105,7 +105,7 @@ O essencial é feito pela própria interface, em **Administração → Configura
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `PORT` | `8080` | Porta HTTP |
-| `BASE_URL` | — | Endereço público usado nos links dos e-mails |
+| `BASE_URL` | — | Endereço público usado nos links dos e-mails (obrigatório para a redefinição de senha por e-mail) |
 | `CHAMADOS_DATA_DIR` | `./data` | Banco, anexos, backups e chave secreta |
 | `DATABASE_URL` | SQLite em `DATA_DIR` | Ex.: `postgresql+psycopg://user:senha@host/chamados` (instale `psycopg`) |
 | `MAX_UPLOAD_MB` | `20` | Tamanho máximo de anexos |
