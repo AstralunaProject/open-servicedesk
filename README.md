@@ -198,6 +198,24 @@ app/
 run.py              servidor de produção (Waitress)
 ```
 
+## Perguntas frequentes
+
+### O Open Servicedesk é gratuito?
+
+Sim. É open source sob licença MIT, sem mensalidade e sem limite de técnicos, usuários ou chamados.
+
+### Serve como alternativa ao GLPI, osTicket ou Zammad?
+
+Para equipes pequenas, sim. O foco é o essencial de um sistema de chamados (help desk): abertura e atendimento, SLA em horário comercial, base de conhecimento, inventário de ativos e abertura por e-mail. Instala em minutos com Docker ou pelo instalador e não exige configurar banco de dados.
+
+### Precisa de internet para funcionar?
+
+Não. Roda na intranet, sem CDN e sem serviços externos. A internet só é usada se você configurar o envio e o recebimento de e-mails.
+
+### Dá para abrir chamados por e-mail?
+
+Sim. Mensagens enviadas para a caixa configurada via IMAP viram chamados, e as respostas voltam para o chamado certo.
+
 ## Licença
 
 [MIT](LICENSE) © AstralunaProject
