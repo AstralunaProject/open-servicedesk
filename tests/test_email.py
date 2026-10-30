@@ -88,3 +88,8 @@ def test_reply_from_agent_address_is_not_accepted(app, requester, agent):
     assert forged is None
     assert ticket.comments == []
     assert db.session.scalar(db.select(db.func.count(Ticket.id))) == 1
+
+
+def test_huge_ticket_number_in_subject_does_not_fail(app, admin):
+    ticket = mail_inbound.process_message(raw_email("ana@cliente.com", f"[CH{'9' * 30}] Oi", "texto"))
+    assert ticket is not None

@@ -111,7 +111,7 @@ def process_message(raw: bytes):
         return None
 
     prefix = re.escape(get_setting("ticket_prefix"))
-    match = re.search(rf"\[{prefix}(\d+)\]", subject)
+    match = re.search(rf"\[{prefix}(\d{{1,9}})\]", subject)
     ticket = db.session.get(Ticket, int(match.group(1))) if match else None
     if ticket and not services.can_view(user, ticket):
         ticket = None
@@ -125,7 +125,7 @@ def process_message(raw: bytes):
 
     description = body
     if match:
-        subject = re.sub(rf"\[{prefix}\d+\]\s*", "", subject)
+        subject = re.sub(rf"\[{prefix}\d{{1,9}}\]\s*", "", subject)
     if ticket:
         description = f"Referente ao chamado encerrado {ticket.number}.\n\n{body}"
     subject = re.sub(r"^\s*((re|res|fw|fwd|enc)\s*:\s*)+", "", subject, flags=re.I) or "(sem assunto)"

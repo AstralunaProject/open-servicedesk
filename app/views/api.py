@@ -85,6 +85,17 @@ def serialize(ticket: Ticket, full: bool = False) -> dict:
     return data
 
 
+def _json_body(*text_fields):
+    """Corpo JSON como dict, ou None se não for objeto ou algum campo de texto vier com outro tipo."""
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return None
+    for key in text_fields:
+        if data.get(key) is not None and not isinstance(data[key], str):
+            return None
+    return data
+
+
 def _ticket_or_error(ticket_id):
     ticket = db.session.get(Ticket, ticket_id)
     if ticket is None or not services.can_view(g.api_user, ticket):
@@ -119,7 +130,9 @@ def list_tickets():
 @bp.route("/tickets", methods=["POST"])
 @token_required
 def create_ticket():
-    data = request.get_json(silent=True) or {}
+    data = _json_body("title", "description", "type", "channel", "requester_email", "category")
+    if data is None:
+        return jsonify(error="JSON inválido."), 400
     user = g.api_user
     requester = user
     if data.get("requester_email"):
@@ -171,7 +184,9 @@ def update_ticket(ticket_id):
         return jsonify(error="Chamado não encontrado."), 404
     if not g.api_user.is_agent:
         return jsonify(error="Sem permissão."), 403
-    data = request.get_json(silent=True) or {}
+    data = _json_body("title", "type", "status", "resolution_code", "resolution_notes")
+    if data is None:
+        return jsonify(error="JSON inválido."), 400
     allowed = {
         "title",
         "type",
@@ -198,7 +213,9 @@ def add_comment(ticket_id):
     ticket = _ticket_or_error(ticket_id)
     if ticket is None:
         return jsonify(error="Chamado não encontrado."), 404
-    data = request.get_json(silent=True) or {}
+    data = _json_body("body")
+    if data is None:
+        return jsonify(error="JSON inválido."), 400
     try:
         comment = services.add_comment(
             ticket, g.api_user, data.get("body"), internal=bool(data.get("internal"))

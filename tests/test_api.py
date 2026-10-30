@@ -65,3 +65,15 @@ def test_api_agent_opens_on_behalf_and_resolves(app, requester, agent):
         headers=headers,
     )
     assert response.get_json()["status"] == "resolved"
+
+
+def test_api_rejects_wrong_types(app, requester, agent):
+    client = app.test_client()
+    created = client.post("/api/v1/tickets", json={"title": "Ok"}, headers=token_for(requester)).get_json()
+    headers = token_for(agent)
+    url = f"/api/v1/tickets/{created['id']}"
+    assert client.post("/api/v1/tickets", json={"title": 123}, headers=headers).status_code == 400
+    assert client.post("/api/v1/tickets", json=["x"], headers=headers).status_code == 400
+    assert client.patch(url, json={"status": ["resolved"]}, headers=headers).status_code == 400
+    assert client.patch(url, json={"title": {"a": 1}}, headers=headers).status_code == 400
+    assert client.post(f"{url}/comments", json={"body": 5}, headers=headers).status_code == 400
