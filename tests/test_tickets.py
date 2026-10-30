@@ -195,3 +195,12 @@ def test_admin_rejects_non_numeric_ports(app, admin):
     assert get_setting("smtp_port") == "587"
     assert get_setting("imap_port") == "993"
     assert get_setting("smtp_host") == "smtp.test"
+
+
+def test_csv_export_neutralizes_formulas(app, agent):
+    evil = make_user("evil@empresa.com", name="@SUM(1+1)")
+    services.create_ticket(evil, '=HYPERLINK("http://x","clique")', "desc")
+    csv = login(app, agent).get("/chamados/exportar.csv?view=todos").data.decode("utf-8-sig")
+    row = csv.splitlines()[1].split(";")
+    assert row[2].startswith("\"'=HYPERLINK")
+    assert row[8] == "'@SUM(1+1)"
