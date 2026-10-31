@@ -25,7 +25,7 @@ Pense em um "ServiceNow" enxuto: tudo o que uma equipe de 1 a 20 técnicos usa n
 **SLA**
 - Prazos de primeira resposta e de solução por prioridade
 - Contagem em horário comercial (dias e horários configuráveis) ou 24×7
-- Pausa automática enquanto o chamado aguarda o solicitante ou um terceiro
+- Pausa automática enquanto o chamado aguarda o solicitante ou um terceiro, e enquanto está resolvido: se for reaberto, o prazo continua de onde parou
 
 **Gestão**
 - Painel com indicadores: abertos, atrasados, tempo médio de solução, cumprimento de SLA, satisfação
@@ -137,6 +137,16 @@ chamados.suaempresa.com.br {
 
 Para restaurar, pare o sistema, extraia o `.zip` dentro da pasta de dados (substituindo `chamados.db` e `anexos/`) e inicie novamente.
 
+## Atualização
+
+Faça um backup e baixe a versão nova (`git pull` ou o ZIP). Depois:
+
+- **Docker:** `docker compose up -d --build`
+- **Linux:** `sudo ./scripts/instalar-linux.sh` de novo (mantém dados e `.env`)
+- **Windows e manual:** reinicie o serviço ou o `run.py`
+
+Ao iniciar, o sistema atualiza o banco sozinho e registra no log cada passo aplicado.
+
 ## Comandos úteis
 
 ```bash
@@ -190,6 +200,7 @@ app/
   constants.py      status, prioridades, perfis e demais valores de domínio
   services.py       regras de negócio dos chamados (web, API e e-mail usam as mesmas)
   sla.py            prazos e horário comercial
+  migrations.py     versões do schema, aplicadas na inicialização
   mail_inbound.py   leitura da caixa IMAP
   notifications.py  e-mails de saída
   views/            rotas web e API

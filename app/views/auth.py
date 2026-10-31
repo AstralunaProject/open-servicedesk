@@ -20,28 +20,32 @@ MIN_PASSWORD = 8
 _failures_lock = threading.Lock()
 _WINDOW = 15 * 60
 _MAX_FAILURES = 10
+# Barra quem testa muitos e-mails do mesmo IP; alto o bastante para um escritório atrás de NAT.
+_MAX_FAILURES_PER_IP = 50
+_MAX_RESET_REQUESTS = 5
 
 
-def _client_key(email: str) -> str:
-    return f"{request.remote_addr}|{email}"
-
-
-def _failures() -> dict[str, list[float]]:
+def _attempts() -> dict[str, list[float]]:
     return current_app.extensions.setdefault("login_failures", {})
 
 
-def _is_blocked(key: str) -> bool:
+def _over_limit(key: str, limit: int) -> bool:
     now = time.monotonic()
     with _failures_lock:
-        failures = _failures()
-        attempts = [t for t in failures.get(key, []) if now - t < _WINDOW]
-        failures[key] = attempts
-        return len(attempts) >= _MAX_FAILURES
+        attempts = _attempts()
+        recent = [t for t in attempts.get(key, []) if now - t < _WINDOW]
+        if recent:
+            attempts[key] = recent
+        else:
+            attempts.pop(key, None)
+        return len(recent) >= limit
 
 
-def _register_failure(key: str) -> None:
+def _record(*keys: str) -> None:
+    now = time.monotonic()
     with _failures_lock:
-        _failures().setdefault(key, []).append(time.monotonic())
+        for key in keys:
+            _attempts().setdefault(key, []).append(now)
 
 
 def _safe_next(target: str | None) -> str | None:
@@ -75,8 +79,9 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        key = _client_key(email)
-        if _is_blocked(key):
+        ip_key = f"ip|{request.remote_addr}"
+        key = f"login|{request.remote_addr}|{email}"
+        if _over_limit(key, _MAX_FAILURES) or _over_limit(ip_key, _MAX_FAILURES_PER_IP):
             flash("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.", "error")
             return render_template("auth/login.html", email=email), 429
         user = find_user_by_email(email)
@@ -86,7 +91,7 @@ def login():
             user.last_login_at = utcnow()
             db.session.commit()
             return redirect(_safe_next(request.args.get("next")) or url_for("main.index"))
-        _register_failure(key)
+        _record(key, ip_key)
         flash("E-mail ou senha inválidos.", "error")
         return render_template("auth/login.html", email=email), 401
     return render_template("auth/login.html", email="")
@@ -229,6 +234,11 @@ def revoke_token():
 def forgot_password():
     email_enabled = notifications.notifications_enabled()
     if request.method == "POST" and email_enabled:
+        reset_key = f"reset|{request.remote_addr}"
+        if _over_limit(reset_key, _MAX_RESET_REQUESTS):
+            flash("Muitos pedidos de redefinição. Aguarde alguns minutos e tente novamente.", "error")
+            return render_template("auth/forgot.html", email_enabled=email_enabled), 429
+        _record(reset_key)
         user = find_user_by_email(request.form.get("email", ""))
         if user and user.active and not current_app.config.get("BASE_URL"):
             log.warning("BASE_URL não configurada; redefinição de senha não enviada para %s", user.email)

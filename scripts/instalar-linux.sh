@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Instala o Open Servicedesk em /opt/open-servicedesk e registra um serviço systemd.
+# Rodar de novo atualiza o código e reinicia o serviço; dados e .env são mantidos.
 # Uso: sudo ./scripts/instalar-linux.sh [porta]
 set -euo pipefail
 
@@ -17,6 +18,7 @@ python3 -m venv --help >/dev/null 2>&1 || fail "módulo venv ausente. Instale co
 
 echo "==> Copiando arquivos para $DEST"
 mkdir -p "$DEST"
+rm -rf "$DEST/app"
 cp -r "$SRC"/app "$SRC"/run.py "$SRC"/wsgi.py "$SRC"/requirements.txt "$DEST"/
 
 id "$SERVICE_USER" >/dev/null 2>&1 || useradd --system --home "$DEST" --shell /usr/sbin/nologin "$SERVICE_USER"
@@ -56,7 +58,8 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now open-servicedesk
+systemctl enable open-servicedesk
+systemctl restart open-servicedesk
 
 cat > /etc/cron.d/open-servicedesk-backup <<CRON
 # Backup diário às 02h, mantendo os últimos 14 arquivos.

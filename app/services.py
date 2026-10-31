@@ -238,9 +238,12 @@ def set_status(
         ticket.satisfaction = None
         ticket.satisfaction_comment = None
 
-    if old_status in PAUSED_STATUSES and new_status not in PAUSED_STATUSES:
+    # O relógio para na espera e na solução. Reabrir retoma de onde parou, sem cobrar o
+    # tempo em que o chamado ficou resolvido; sair da espera incorpora a pausa ao prazo
+    # antes de comparar a solução com ele.
+    if old_status in PAUSED_STATUSES or reopening:
         sla.resume(ticket, now)
-    if new_status in PAUSED_STATUSES and old_status not in PAUSED_STATUSES:
+    if new_status in PAUSED_STATUSES or (new_status in DONE_STATUSES and old_status not in DONE_STATUSES):
         sla.pause(ticket, now)
 
     # Assumir ou mudar o status não é resposta; a solução, por ir ao solicitante, conta como uma.

@@ -163,7 +163,7 @@ class Ticket(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow, index=True)
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     first_response_at = db.Column(db.DateTime)
-    resolved_at = db.Column(db.DateTime)
+    resolved_at = db.Column(db.DateTime, index=True)
     closed_at = db.Column(db.DateTime)
 
     response_due = db.Column(db.DateTime)
